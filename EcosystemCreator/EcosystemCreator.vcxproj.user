@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">
+    <LocalDebuggerCommand>$(H18_PATH)\bin\hmaster.exe</LocalDebuggerCommand>
+    <LocalDebuggerMergeEnvironment>false</LocalDebuggerMergeEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>HOUDINI_DSO_PATH=$(CUSTOM_DSO_PATH);&amp;</LocalDebuggerEnvironment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerCommand>$(H18_PATH)\bin\hmaster.exe</LocalDebuggerCommand>
+    <LocalDebuggerEnvironment>HOUDINI_DSO_PATH=$(CUSTOM_DSO_PATH);&amp;</LocalDebuggerEnvironment>
+    <LocalDebuggerMergeEnvironment>false</LocalDebuggerMergeEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+</Project>
