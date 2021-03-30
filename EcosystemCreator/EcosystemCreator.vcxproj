@@ -114,7 +114,7 @@
     <IntDir>$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">
-    <OutDir>C:\Users\award\Documents\Houdini18\dso</OutDir>
+    <OutDir>C:\Users\nd_mo\Documents\houdini18.5\dso</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>

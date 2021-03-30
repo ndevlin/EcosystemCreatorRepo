@@ -8,3 +8,5 @@
 .vs/hlsystem/v15/ipch/AutoPCH/cc81fd9082c0ceb8/LSYSTEM.ipch
 .vs/
 EcosystemCreator/x64/
+EcosystemCreator/EcosystemCreator.vcxproj
+*.vcxproj
