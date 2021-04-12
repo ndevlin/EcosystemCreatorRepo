@@ -153,11 +153,46 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!node->runCreateScript())
 		std::cout << "Root module constructor error" << std::endl;
 
+	node->moveToGoodPosition();
+
+
 	SOP_Branch* bNode = (SOP_Branch*)node;
 	newPlant->setRootModule(bNode);
 	newPlant->setMerger(mergeNode);
 	newPlant->addToMerger(bNode);
 	//mergeNode->connectToInputNode(*node, 0);
+
+	mergeNode->moveToGoodPosition();
+
+
+
+
+	OP_Node* mergeNode2 = newPlant->createNode("merge");
+	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!mergeNode2->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+
+
+
+	OP_Node* copyToPoints = newPlant->createNode("copytopoints");
+	if (!copyToPoints) 
+	{ 
+		std::cout << "Copy To Points is Nullptr" << std::endl; 
+		return newPlant;
+	}
+	else if (!copyToPoints->runCreateScript())
+		std::cout << "Copy To Points constructor error" << std::endl;
+
+
+	copyToPoints->connectToInputNode(*mergeNode, 1, 0);
+
+	mergeNode2->connectToInputNode(*copyToPoints, 0, 0);
+
+	mergeNode2->connectToInputNode(*mergeNode, 1, 0);
+
+	copyToPoints->moveToGoodPosition();
+
+
 
 	return newPlant;
 }
