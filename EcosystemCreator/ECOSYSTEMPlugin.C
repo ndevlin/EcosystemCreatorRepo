@@ -165,15 +165,13 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	mergeNode->moveToGoodPosition();
 
 
-
-
 	OP_Node* mergeNode2 = newPlant->createNode("merge");
-	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	if (!mergeNode2) { std::cout << "Merge Node is Nullptr" << std::endl; }
 	else if (!mergeNode2->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-
-
+	
+	// Copy to Points to allow leaf instancing
 	OP_Node* copyToPoints = newPlant->createNode("copytopoints");
 	if (!copyToPoints) 
 	{ 
@@ -191,6 +189,33 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	mergeNode2->connectToInputNode(*mergeNode, 1, 0);
 
 	copyToPoints->moveToGoodPosition();
+
+	mergeNode2->moveToGoodPosition();
+
+
+	OP_Node* mergeNode3 = newPlant->createNode("merge");
+	if (!mergeNode3) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!mergeNode3->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+
+	// copyToPoints2 to create instances of the tree for a forest
+	OP_Node* copyToPoints2 = newPlant->createNode("copytopoints");
+	if (!copyToPoints2)
+	{
+		std::cout << "Copy To Points is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!copyToPoints2->runCreateScript())
+		std::cout << "Copy To Points constructor error" << std::endl;
+
+
+	copyToPoints2->connectToInputNode(*mergeNode2, 0, 0);
+
+	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
+
+	copyToPoints2->moveToGoodPosition();
+
+	mergeNode3->moveToGoodPosition();
 
 
 
