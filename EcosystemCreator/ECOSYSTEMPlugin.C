@@ -53,7 +53,7 @@ static PRM_Default	     g1Default(1.0);
 static PRM_Default	     g2Default(-0.2);
 
 // Set up the ranges for the parameter inputs here
-static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 10.0);
+static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
@@ -181,6 +181,18 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!copyToPoints->runCreateScript())
 		std::cout << "Copy To Points constructor error" << std::endl;
 
+	// Star will serve as a leaf for now
+	OP_Node* star = newPlant->createNode("star");
+	if (!star)
+	{
+		std::cout << "Star is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!star->runCreateScript())
+		std::cout << "Star constructor error" << std::endl;
+
+	star->moveToGoodPosition();
+
 
 	copyToPoints->connectToInputNode(*mergeNode, 1, 0);
 
@@ -209,14 +221,57 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		std::cout << "Copy To Points constructor error" << std::endl;
 
 
+	
+	// Grid to represent ground
+	OP_Node* grid = newPlant->createNode("grid");
+	if (!grid)
+	{
+		std::cout << "Grid is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!grid->runCreateScript())
+		std::cout << "Grid constructor error" << std::endl;
+
+	grid->moveToGoodPosition();
+	
+
+
+	// Mountain to vary terrain
+	OP_Node* mountain = newPlant->createNode("mountain");
+	if (!mountain)
+	{
+		std::cout << "Mountain is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!mountain->runCreateScript())
+		std::cout << "Mountain constructor error" << std::endl;
+
+	mountain->connectToInputNode(*grid, 0, 0);
+	mountain->moveToGoodPosition();
+
+
+	// Scatter to create points
+	OP_Node* scatter = newPlant->createNode("scatter");
+	if (!scatter)
+	{
+		std::cout << "Scatter is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!scatter->runCreateScript())
+		std::cout << "Scatter constructor error" << std::endl;
+
+	scatter->connectToInputNode(*mountain, 0, 0);
+	scatter->moveToGoodPosition();
+
+
 	copyToPoints2->connectToInputNode(*mergeNode2, 0, 0);
-
-	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
-
+	copyToPoints2->connectToInputNode(*scatter, 1, 0);
 	copyToPoints2->moveToGoodPosition();
 
+	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
+	mergeNode3->connectToInputNode(*mountain, 1, 0);
 	mergeNode3->moveToGoodPosition();
-
+	
 
 
 	return newPlant;
