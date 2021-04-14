@@ -275,7 +275,9 @@ void SOP_Branch::setAge(float changeInAge) {
 				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
 
-				newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
+				// TODO: set lambda and determ properly
+				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
+				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
 				newModule->setParentModule(this, terminalNode);
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);

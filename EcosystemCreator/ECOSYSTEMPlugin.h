@@ -26,6 +26,8 @@ public:
 	void                     addToMerger(SOP_Branch* bMod);
 	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
 
+	float                     getAge();
+
 protected:
 
 	OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op);

@@ -123,12 +123,30 @@ BNode * BranchPrototype::getShapeAtIdx(int i)
 // Simple default for now
 PrototypeSet::PrototypeSet()
 {
-	prototypes.push_back(new BranchPrototype());
+	//prototypes.push_back(new BranchPrototype());
+	// #1
+	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[&FoFoFoA]////[&FoFoFoA]////&FoFoFoA\no->io", 3));
+	
+	// #2
+	prototypes.push_back(new BranchPrototype("FoFoAFoC\nA->/[[&FoFoC]////[&FoFoC]////&FoFoC]\nC->FoAFoC\no->io", 3));
+
+	// #3
+	prototypes.push_back(new BranchPrototype("///FoFoAFoC\nA->[&FoFoC]////[&FoFoC]////&FoFoC\nC->FoAFoC\no->io", 3));
 }
 
 /// Method to select a prototype type based on apical control
 BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 {
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
-	return prototypes.at(0)->copyValues();
+	// For now we are passing in values based on plant age solely instead
+	float r = 1.f / prototypes.size();
+	float lowerBound = std::max(lambda - r, 0.0f);
+	float upperBound = std::min(lambda + r, 1.0f);
+
+	float idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
+
+	//std::cout << std::to_string(lambda) + " " + std::to_string(determ) << std::endl;
+	//std::cout << std::to_string(a) + " " + std::to_string(b) << std::endl;
+	//std::cout << std::to_string(idx) << std::endl;
+	return prototypes.at(idx)->copyValues();
 }
