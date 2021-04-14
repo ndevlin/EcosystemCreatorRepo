@@ -164,11 +164,22 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	mergeNode->moveToGoodPosition();
 
+	// Color for bark
+	OP_Node* color1 = newPlant->createNode("color");
+	if (!color1)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!color1->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
+
 
 	OP_Node* mergeNode2 = newPlant->createNode("merge");
 	if (!mergeNode2) { std::cout << "Merge Node is Nullptr" << std::endl; }
 	else if (!mergeNode2->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
+
 
 	
 	// Copy to Points to allow leaf instancing
@@ -193,12 +204,25 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	star->moveToGoodPosition();
 
+	// Color for leaves
+	OP_Node* color2 = newPlant->createNode("color");
+	if (!color2)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!color2->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
+
+	color2->connectToInputNode(*star, 0, 0);
+	color2->moveToGoodPosition();
+
 
 	copyToPoints->connectToInputNode(*mergeNode, 1, 0);
 
 	mergeNode2->connectToInputNode(*copyToPoints, 0, 0);
 
-	mergeNode2->connectToInputNode(*mergeNode, 1, 0);
+	mergeNode2->connectToInputNode(*color1, 1, 0);
 
 	copyToPoints->moveToGoodPosition();
 
@@ -235,7 +259,6 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	grid->moveToGoodPosition();
 	
 
-
 	// Mountain to vary terrain
 	OP_Node* mountain = newPlant->createNode("mountain");
 	if (!mountain)
@@ -248,6 +271,17 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	mountain->connectToInputNode(*grid, 0, 0);
 	mountain->moveToGoodPosition();
+
+
+	// Color for leaves
+	OP_Node* color3 = newPlant->createNode("color");
+	if (!color3)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!color3->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
 
 
 	// Scatter to create points
@@ -268,11 +302,16 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	copyToPoints2->connectToInputNode(*scatter, 1, 0);
 	copyToPoints2->moveToGoodPosition();
 
-	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
-	mergeNode3->connectToInputNode(*mountain, 1, 0);
-	mergeNode3->moveToGoodPosition();
-	
 
+	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
+	mergeNode3->connectToInputNode(*color3, 1, 0);
+	mergeNode3->moveToGoodPosition();
+
+	color3->connectToInputNode(*mountain, 0, 0);
+	color3->moveToGoodPosition();
+	
+	color1->connectToInputNode(*mergeNode, 0, 0);
+	color1->moveToGoodPosition();
 
 	return newPlant;
 }
