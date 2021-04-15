@@ -381,6 +381,10 @@ void OBJ_Plant::setMerger(OP_Node* mergeNode) {
 	merger = mergeNode;
 }
 
+float OBJ_Plant::getAge() {
+	return plantAge;
+}
+
 void OBJ_Plant::addToMerger(SOP_Branch* bMod) {
 	// Get unique input path
 	UT_String path;

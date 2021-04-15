@@ -53,6 +53,7 @@ const std::string& LSystem::getIteration(unsigned int n)
         {
             current = iterate(current);
             iterations.push_back(current);
+			//std::cout << current << std::endl;
         }        
     }
     return iterations[n];
@@ -112,6 +113,7 @@ void LSystem::addProduction(std::string line)
         std::string symFrom = line.substr(0, index);
         std::string symTo = line.substr(index+2);
         productions[symFrom] = symTo;
+		//std::cout << symFrom + " -> " + symTo << std::endl;
     }
     else  // assume its the start sym
     {
@@ -120,6 +122,7 @@ void LSystem::addProduction(std::string line)
 		if (current.find('F') != std::string::npos) {
 			iterations.push_back(current);  // TODO add option to control this
 		}
+		//std::cout << current << std::endl;
     }
 	// TODO, maybe add an additional hidden rule of F->Fi that gets processed after each iter?
 	// so that that extension part is more subtle. or make chars pairs
