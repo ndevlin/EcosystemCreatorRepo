@@ -139,7 +139,7 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 {
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
 	// For now we are passing in values based on plant age solely instead
-	float r = 1.f / prototypes.size();
+	float r = 2.0f / prototypes.size();
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 
@@ -150,3 +150,4 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 	//std::cout << std::to_string(idx) << std::endl;
 	return prototypes.at(idx)->copyValues();
 }
+

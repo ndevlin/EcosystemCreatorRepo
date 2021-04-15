@@ -396,3 +396,4 @@ void OBJ_Plant::addToMerger(SOP_Branch* bMod) {
 BranchPrototype* OBJ_Plant::copyPrototypeFromList(float lambda, float determ) {
 	return prototypeSet->selectNewPrototype(lambda, determ);
 }
+
