@@ -132,6 +132,16 @@ PrototypeSet::PrototypeSet()
 
 	// #3
 	prototypes.push_back(new BranchPrototype("///FoFoAFoC\nA->[&FoFoC]////[&FoFoC]////&FoFoC\nC->FoAFoC\no->io", 3));
+
+	// #4
+	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+
+	// #5
+	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+
+	// #6
+	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
+
 }
 
 /// Method to select a prototype type based on apical control
