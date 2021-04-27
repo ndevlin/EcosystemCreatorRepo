@@ -34,7 +34,7 @@ public:
     static CH_LocalVariable	 myVariables[];
 
 	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
-	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ);
+	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn);
 
 	/// While setting the parent module, also alters current node data based on last branch
 	void setParentModule(SOP_Branch* parModule, BNode* connectingNode = nullptr);
@@ -97,6 +97,7 @@ private:
 
 	std::pair<float, float> currAgeRange;
 	BNode* root;
+	int rootIndex;
 
 	SOP_Branch* parentModule;
 	std::vector<SOP_Branch*> childModules;

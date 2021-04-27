@@ -9,8 +9,8 @@ void
 newObjectOperator(OP_OperatorTable *table)
 {
 	table->addOperator(
-		new OP_Operator("EcoPlantNode",                  // Internal name
-						"SinglePlantNode",               // UI name
+		new OP_Operator("EcosystemCreator",                  // Internal name
+						"EcoSystemCreator",               // UI name
 	                    OBJ_Plant::myConstructor,	     // How to build the SOP
 	                    OBJ_Plant::buildTemplatePair(0), // My parameters
 	                    OBJ_Plant::theChildTableName,    // Table of child nodes
@@ -41,7 +41,7 @@ newSopOperator(OP_OperatorTable *table)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declaring parameters here
-static PRM_Name	plantAgeName("plantAge", "PlantAge");
+static PRM_Name	plantAgeName("time", "Time");
 static PRM_Name	      g1Name("g1",       "TropismDecrease");
 static PRM_Name	      g2Name("g2",       "TropismStrength");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
@@ -146,7 +146,12 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	int numPlants = 3;
+	newPlant->setMainMerger(mergeNode);
+
+
+
+	int numPlants = 6;
+
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -159,11 +164,24 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		node->moveToGoodPosition();
 
+
+		// Create a merge node to merge all sop output geom for this node
+		OP_Node* subMergeNode = newPlant->createNode("merge");
+
+		if (!subMergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+		else if (!subMergeNode->runCreateScript())
+			std::cout << "Merge constructor error" << std::endl;
+
+		subMergeNode->moveToGoodPosition();
+
+
 		SOP_Branch* bNode = (SOP_Branch*)node;
 		newPlant->setRootModule(bNode);
-		newPlant->setMerger(mergeNode);
-		newPlant->addToMerger(bNode);
+		newPlant->setMerger(subMergeNode);
+		newPlant->addToMerger(bNode, i);
 		//mergeNode->connectToInputNode(*node, 0);
+
+		mergeNode->connectToInputNode(*subMergeNode, i);
 
 		node->moveToGoodPosition();
 	}
@@ -325,7 +343,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), 
-	prototypeSet(nullptr), numRootModules(0), merger(nullptr)
+	prototypeSet(nullptr), numRootModules(0), mainMerge(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
@@ -396,24 +414,29 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	{ 
 		rootModules.push_back(node);
 	}
-	node->setPlantAndPrototype(this, 0.0f, 0.0f);
+	node->setPlantAndPrototype(this, 0.0f, 0.0f, numRootModules);
 	node->setAge(0.0f);
 	numRootModules++;
 }
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {
-	merger = mergeNode;
+	mergers.push_back(mergeNode);
+}
+
+
+void OBJ_Plant::setMainMerger(OP_Node* mergeNode) {
+	mainMerge = mergeNode;
 }
 
 float OBJ_Plant::getAge() {
 	return plantAge;
 }
 
-void OBJ_Plant::addToMerger(SOP_Branch* bMod) {
+void OBJ_Plant::addToMerger(SOP_Branch* bMod, int index) {
 	// Get unique input path
 	UT_String path;
 	bMod->getFullPath(path);
-	merger->setNamedInput(path.hash(), bMod);
+	mergers[index]->setNamedInput(path.hash(), bMod);
 }
 
 // Generate a prototype copy for editing in branch node

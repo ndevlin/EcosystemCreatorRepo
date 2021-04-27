@@ -194,12 +194,13 @@ SOP_Branch::cookMySop(OP_Context &context)
 }
 
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
-void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ) {
+void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn) {
 	plant = p;
 	prototype = plant->copyPrototypeFromList(lambda, determ);
 
 	currAgeRange = prototype->getRangeAtIdx(0);
 	root = prototype->getShapeAtIdx(0);
+	rootIndex = rootIndexIn;
 }
 
 /// While setting the parent module, also alters current node data based on last branch
@@ -277,11 +278,11 @@ void SOP_Branch::setAge(float changeInAge) {
 
 				// TODO: set lambda and determ properly
 				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
-				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
+				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f, rootIndex);
 				newModule->setParentModule(this, terminalNode);
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
-				plant->addToMerger(newModule);
+				plant->addToMerger(newModule, rootIndex);
 				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here
