@@ -67,7 +67,10 @@ private:
 	float plantAge;
 
 	PrototypeSet* prototypeSet;
-	SOP_Branch* rootModule;
+
+	std::vector<SOP_Branch*> rootModules;
+	int numRootModules;
+
 	OP_Node* merger;
 };
 } // End HDK_Sample namespace

@@ -146,23 +146,30 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	OP_Node* node = newPlant->createNode("BranchModule");
+	int numPlants = 3;
 
-	// Quick issue check
-	if (!node) { std::cout << "Root module is Nullptr" << std::endl; }
-	else if (!node->runCreateScript())
-		std::cout << "Root module constructor error" << std::endl;
+	for (int i = 0; i < numPlants; i++)
+	{
+		OP_Node* node = newPlant->createNode("BranchModule");
 
-	node->moveToGoodPosition();
+		// Quick issue check
+		if (!node) { std::cout << "Root module is Nullptr" << std::endl; }
+		else if (!node->runCreateScript())
+			std::cout << "Root module constructor error" << std::endl;
 
+		node->moveToGoodPosition();
 
-	SOP_Branch* bNode = (SOP_Branch*)node;
-	newPlant->setRootModule(bNode);
-	newPlant->setMerger(mergeNode);
-	newPlant->addToMerger(bNode);
-	//mergeNode->connectToInputNode(*node, 0);
+		SOP_Branch* bNode = (SOP_Branch*)node;
+		newPlant->setRootModule(bNode);
+		newPlant->setMerger(mergeNode);
+		newPlant->addToMerger(bNode);
+		//mergeNode->connectToInputNode(*node, 0);
+
+		node->moveToGoodPosition();
+	}
 
 	mergeNode->moveToGoodPosition();
+
 
 	// Color for bark
 	OP_Node* color1 = newPlant->createNode("color");
@@ -318,10 +325,12 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), 
-	prototypeSet(nullptr), rootModule(nullptr), merger(nullptr)
+	prototypeSet(nullptr), numRootModules(0), merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
+	rootModules = std::vector<SOP_Branch*>();
+	rootModules.push_back(nullptr);
 }
 
 OBJ_Plant::~OBJ_Plant() {}
@@ -353,8 +362,15 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	// for thickness we would only need to rerun the traversal unless time also changes
 	// But this might be more of a prototype-designer sort of thing
 
-	rootModule->setAge(ageVal - plantAge);
+	float diff = ageVal - plantAge;
+
+	for(int i = 0; i < numRootModules; i++)
+	{ 
+		rootModules[i]->setAge(diff);
+	}
+
 	plantAge = ageVal;
+
 
 	// Run geometry cook, needed to process primitive inputs
 	OP_ERROR    errorstatus;
@@ -372,9 +388,17 @@ void OBJ_Plant::setPrototypeList() {
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {
-	rootModule = node;
-	rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
-	rootModule->setAge(0.0f);
+	if (numRootModules < 1)
+	{
+		rootModules[0] = node;
+	}
+	else
+	{ 
+		rootModules.push_back(node);
+	}
+	node->setPlantAndPrototype(this, 0.0f, 0.0f);
+	node->setAge(0.0f);
+	numRootModules++;
 }
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {
