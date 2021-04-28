@@ -273,6 +273,8 @@ void SOP_Branch::setAge(float changeInAge) {
 			for (BNode* terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
 
+				newModule->moveToGoodPosition();
+
 				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
 

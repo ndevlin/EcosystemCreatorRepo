@@ -140,27 +140,74 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	newPlant->setPrototypeList();
 
 	// Create a merge node to merge all sop output geom
-	OP_Node* mergeNode = newPlant->createNode("merge");
+	OP_Node* allTreesMergeNode = newPlant->createNode("merge");
 
-	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode->runCreateScript())
+	if (!allTreesMergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!allTreesMergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	newPlant->setMainMerger(mergeNode);
+	newPlant->setMainMerger(allTreesMergeNode);
+
+	OP_Node* finalMerge = newPlant->createNode("merge");
+	if (!finalMerge) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!finalMerge->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+	finalMerge->moveToGoodPosition();
+
+
+	// Grid to represent ground
+	OP_Node* grid = newPlant->createNode("grid");
+	if (!grid)
+	{
+		std::cout << "Grid is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!grid->runCreateScript())
+		std::cout << "Grid constructor error" << std::endl;
+
+	grid->moveToGoodPosition();
+
+
+	// Mountain to vary terrain
+	OP_Node* mountain = newPlant->createNode("mountain");
+	if (!mountain)
+	{
+		std::cout << "Mountain is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!mountain->runCreateScript())
+		std::cout << "Mountain constructor error" << std::endl;
+
+	mountain->connectToInputNode(*grid, 0, 0);
+	mountain->moveToGoodPosition();
+
+
+	// Color for ground
+	OP_Node* groundColor = newPlant->createNode("color");
+	if (!groundColor)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newPlant;
+	}
+	else if (!groundColor->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
 
 
 
-	int numPlants = 6;
+	int numPlants = 4;
 
+	int index = 0;
+
+	std::vector<OP_Node *> scatterNodes;
 
 	for (int i = 0; i < numPlants; i++)
 	{
 		OP_Node* node = newPlant->createNode("BranchModule");
 
 		// Quick issue check
-		if (!node) { std::cout << "Root module is Nullptr" << std::endl; }
+		if (!node) { std::cout << "Branch module is Nullptr" << std::endl; }
 		else if (!node->runCreateScript())
-			std::cout << "Root module constructor error" << std::endl;
+			std::cout << "Branch module constructor error" << std::endl;
 
 		node->moveToGoodPosition();
 
@@ -181,40 +228,75 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		newPlant->addToMerger(bNode, i);
 		//mergeNode->connectToInputNode(*node, 0);
 
-		mergeNode->connectToInputNode(*subMergeNode, i);
+		allTreesMergeNode->connectToInputNode(*subMergeNode, i);
 
 		node->moveToGoodPosition();
+
+
+
+		// Scatter to create points
+		OP_Node* scatter = newPlant->createNode("scatter");
+		if (!scatter)
+		{
+			std::cout << "Scatter is Nullptr" << std::endl;
+			return newPlant;
+		}
+		else if (!scatter->runCreateScript())
+			std::cout << "Scatter constructor error" << std::endl;
+
+		scatterNodes.push_back(scatter);
+		scatter->connectToInputNode(*mountain, 0, 1);
+		scatter->moveToGoodPosition();
+
+		// treeCopyToPoints to create instances of the tree for a forest
+		OP_Node* treeCopyToPoints = newPlant->createNode("copytopoints");
+		if (!treeCopyToPoints)
+		{
+			std::cout << "Copy To Points is Nullptr" << std::endl;
+			return newPlant;
+		}
+		else if (!treeCopyToPoints->runCreateScript())
+			std::cout << "Copy To Points constructor error" << std::endl;
+		treeCopyToPoints->connectToInputNode(*subMergeNode, 0, 0);
+		treeCopyToPoints->connectToInputNode(*scatter, 1, 0);
+		treeCopyToPoints->moveToGoodPosition();
+
+
+		allTreesMergeNode->connectToInputNode(*treeCopyToPoints, index, 0);
+		index++;
 	}
 
-	mergeNode->moveToGoodPosition();
+	allTreesMergeNode->moveToGoodPosition();
+
+	finalMerge->connectToInputNode(*groundColor, 0, 0);
 
 
 	// Color for bark
-	OP_Node* color1 = newPlant->createNode("color");
-	if (!color1)
+	OP_Node* barkColor = newPlant->createNode("color");
+	if (!barkColor)
 	{
 		std::cout << "Color is Nullptr" << std::endl;
 		return newPlant;
 	}
-	else if (!color1->runCreateScript())
+	else if (!barkColor->runCreateScript())
 		std::cout << "Color constructor error" << std::endl;
 
 
-	OP_Node* mergeNode2 = newPlant->createNode("merge");
-	if (!mergeNode2) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode2->runCreateScript())
+	OP_Node* leafBarkMerge = newPlant->createNode("merge");
+	if (!leafBarkMerge) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!leafBarkMerge->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
 
 	
 	// Copy to Points to allow leaf instancing
-	OP_Node* copyToPoints = newPlant->createNode("copytopoints");
-	if (!copyToPoints) 
+	OP_Node* leafCopyToPoints = newPlant->createNode("copytopoints");
+	if (!leafCopyToPoints) 
 	{ 
 		std::cout << "Copy To Points is Nullptr" << std::endl; 
 		return newPlant;
 	}
-	else if (!copyToPoints->runCreateScript())
+	else if (!leafCopyToPoints->runCreateScript())
 		std::cout << "Copy To Points constructor error" << std::endl;
 
 	// Star will serve as a leaf for now
@@ -230,113 +312,38 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	star->moveToGoodPosition();
 
 	// Color for leaves
-	OP_Node* color2 = newPlant->createNode("color");
-	if (!color2)
+	OP_Node* leafColor = newPlant->createNode("color");
+	if (!leafColor)
 	{
 		std::cout << "Color is Nullptr" << std::endl;
 		return newPlant;
 	}
-	else if (!color2->runCreateScript())
+	else if (!leafColor->runCreateScript())
 		std::cout << "Color constructor error" << std::endl;
 
-	color2->connectToInputNode(*star, 0, 0);
-	color2->moveToGoodPosition();
+	leafColor->connectToInputNode(*star, 0, 0);
+	leafColor->moveToGoodPosition();
 
 
-	copyToPoints->connectToInputNode(*mergeNode, 1, 0);
+	leafCopyToPoints->connectToInputNode(*allTreesMergeNode, 1, 0);
 
-	mergeNode2->connectToInputNode(*copyToPoints, 0, 0);
+	leafBarkMerge->connectToInputNode(*leafCopyToPoints, 0, 0);
 
-	mergeNode2->connectToInputNode(*color1, 1, 0);
+	leafBarkMerge->connectToInputNode(*barkColor, 1, 0);
 
-	copyToPoints->moveToGoodPosition();
+	leafCopyToPoints->moveToGoodPosition();
 
-	mergeNode2->moveToGoodPosition();
-
-
-	OP_Node* mergeNode3 = newPlant->createNode("merge");
-	if (!mergeNode3) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode3->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-	// copyToPoints2 to create instances of the tree for a forest
-	OP_Node* copyToPoints2 = newPlant->createNode("copytopoints");
-	if (!copyToPoints2)
-	{
-		std::cout << "Copy To Points is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!copyToPoints2->runCreateScript())
-		std::cout << "Copy To Points constructor error" << std::endl;
+	leafBarkMerge->moveToGoodPosition();
 
 
+	groundColor->connectToInputNode(*mountain, 0, 0);
+	groundColor->moveToGoodPosition();
 	
-	// Grid to represent ground
-	OP_Node* grid = newPlant->createNode("grid");
-	if (!grid)
-	{
-		std::cout << "Grid is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!grid->runCreateScript())
-		std::cout << "Grid constructor error" << std::endl;
+	barkColor->connectToInputNode(*allTreesMergeNode, 0, 0);
+	barkColor->moveToGoodPosition();
 
-	grid->moveToGoodPosition();
-	
+	finalMerge->connectToInputNode(*leafBarkMerge, 1, 0);
 
-	// Mountain to vary terrain
-	OP_Node* mountain = newPlant->createNode("mountain");
-	if (!mountain)
-	{
-		std::cout << "Mountain is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!mountain->runCreateScript())
-		std::cout << "Mountain constructor error" << std::endl;
-
-	mountain->connectToInputNode(*grid, 0, 0);
-	mountain->moveToGoodPosition();
-
-
-	// Color for leaves
-	OP_Node* color3 = newPlant->createNode("color");
-	if (!color3)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color3->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-
-	// Scatter to create points
-	OP_Node* scatter = newPlant->createNode("scatter");
-	if (!scatter)
-	{
-		std::cout << "Scatter is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!scatter->runCreateScript())
-		std::cout << "Scatter constructor error" << std::endl;
-
-	scatter->connectToInputNode(*mountain, 0, 0);
-	scatter->moveToGoodPosition();
-
-
-	copyToPoints2->connectToInputNode(*mergeNode2, 0, 0);
-	copyToPoints2->connectToInputNode(*scatter, 1, 0);
-	copyToPoints2->moveToGoodPosition();
-
-
-	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
-	mergeNode3->connectToInputNode(*color3, 1, 0);
-	mergeNode3->moveToGoodPosition();
-
-	color3->connectToInputNode(*mountain, 0, 0);
-	color3->moveToGoodPosition();
-	
-	color1->connectToInputNode(*mergeNode, 0, 0);
-	color1->moveToGoodPosition();
 
 	return newPlant;
 }
