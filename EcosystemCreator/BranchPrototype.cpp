@@ -137,10 +137,10 @@ PrototypeSet::PrototypeSet()
 	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #5
-	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #6
-	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
+	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
 
 }
 
@@ -149,7 +149,7 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 {
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
 	// For now we are passing in values based on plant age solely instead
-	float r = 2.0f / prototypes.size();
+	float r = prototypes.size();
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 

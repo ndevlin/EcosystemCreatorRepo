@@ -60,6 +60,10 @@ private:
 	float AGE(fpreal t)     { return evalFloat("time", 0, t); }
 	float G1(fpreal t)      { return evalFloat("g1",       0, t); }
 	float G2(fpreal t)      { return evalFloat("g2",       0, t); }
+	float RAINFALL(fpreal t) { return evalFloat("rainfall", 0, t); }
+	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
+
+
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.

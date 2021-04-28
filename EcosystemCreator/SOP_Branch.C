@@ -279,8 +279,15 @@ void SOP_Branch::setAge(float changeInAge) {
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
 
 				// TODO: set lambda and determ properly
-				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
+
+				// Set by age
+				//newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f, rootIndex);
+				
+
+				// Set by rainfall and temperature parameters
 				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f, rootIndex);
+
+				
 				newModule->setParentModule(this, terminalNode);
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);

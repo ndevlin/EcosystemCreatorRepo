@@ -44,6 +44,9 @@ public:
 
 	void destroySelf();
 
+	float rainfall;
+	float temperature;
+
 protected:
 
 	     SOP_Branch(OP_Network *net, const char *name, OP_Operator *op);

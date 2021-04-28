@@ -44,6 +44,9 @@ newSopOperator(OP_OperatorTable *table)
 static PRM_Name	plantAgeName("time", "Time");
 static PRM_Name	      g1Name("g1",       "TropismDecrease");
 static PRM_Name	      g2Name("g2",       "TropismStrength");
+static PRM_Name rainfallName("rainfall", "Rainfall");
+static PRM_Name temperatureName("temperature", "Temperature");
+
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
@@ -51,11 +54,18 @@ static PRM_Name	      g2Name("g2",       "TropismStrength");
 static PRM_Default plantAgeDefault(0.0);
 static PRM_Default	     g1Default(1.0);
 static PRM_Default	     g2Default(-0.2);
+static PRM_Default rainfallDefault(0.0);
+static PRM_Default temperatureDefault(0.0);
+
 
 // Set up the ranges for the parameter inputs here
 static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
+static PRM_Range rainfallRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
+static PRM_Range temperatureRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -65,6 +75,8 @@ OBJ_Plant::myTemplateList[] = {
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault, 0, &plantAgeRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &rainfallName, &rainfallDefault, 0, &rainfallRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &temperatureName, &temperatureDefault, 0, &temperatureRange),
 	PRM_Template()
 };
 
@@ -376,10 +388,14 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	float ageVal;
 	float g1Val;
 	float g2Val;
+	float rainfall;
+	float temperature;
 
 	ageVal = AGE(now);
 	g1Val  = G1(now);
 	g2Val  = G2(now);
+	rainfall = RAINFALL(now);
+	temperature = TEMPERATURE(now);
 
 	BNode::updateG1(g1Val);
 	BNode::updateG2(g2Val);
@@ -389,8 +405,11 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 
 	float diff = ageVal - plantAge;
 
+
 	for(int i = 0; i < numRootModules; i++)
 	{ 
+		rootModules[i]->rainfall = rainfall;
+		rootModules[i]->temperature = temperature;
 		rootModules[i]->setAge(diff);
 	}
 
