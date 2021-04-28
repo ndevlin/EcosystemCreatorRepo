@@ -206,7 +206,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 
 
-	int numPlants = 4;
+	int numPlants = 1;
 
 	int index = 0;
 
@@ -440,7 +440,7 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	{ 
 		rootModules.push_back(node);
 	}
-	node->setPlantAndPrototype(this, 0.0f, 0.0f, numRootModules);
+	node->setPlantAndPrototype(this, 0.0f, 0.0f, numRootModules, 0.f, 0.f);
 	node->setAge(0.0f);
 	numRootModules++;
 }
@@ -466,7 +466,7 @@ void OBJ_Plant::addToMerger(SOP_Branch* bMod, int index) {
 }
 
 // Generate a prototype copy for editing in branch node
-BranchPrototype* OBJ_Plant::copyPrototypeFromList(float lambda, float determ) {
-	return prototypeSet->selectNewPrototype(lambda, determ);
+BranchPrototype* OBJ_Plant::copyPrototypeFromList(float lambda, float determ, float rainfall, float temperature) {
+	return prototypeSet->selectNewPrototype(lambda, determ, rainfall, temperature);
 }
 

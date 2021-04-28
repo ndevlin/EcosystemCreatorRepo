@@ -60,7 +60,7 @@ public:
 	~PrototypeSet() {}
 	
 	/// Method to select a prototype type based on apical control
-	BranchPrototype* selectNewPrototype(float lambda, float determ);
+	BranchPrototype* selectNewPrototype(float lambda, float determ, float rainfall, float temperature);
 	// TODO ^ add starting orientation?
 
 private:

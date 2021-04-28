@@ -21,7 +21,7 @@ public:
 	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
 
 	/// Copy's a prototype instance, used as a base for a new branch module
-	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
+	BranchPrototype*         copyPrototypeFromList(float lambda, float determ, float temperatature, float rainfall);
 	/// Add the corresponding node to the group output geometry
 	void                     addToMerger(SOP_Branch* bMod, int index);
 	// TODO: add a better merger remover. Duplicate inputs end up existing to root???

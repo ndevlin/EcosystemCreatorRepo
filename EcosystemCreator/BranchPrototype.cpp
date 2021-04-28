@@ -137,23 +137,25 @@ PrototypeSet::PrototypeSet()
 	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #5
-	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #6
-	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
 
 }
 
 /// Method to select a prototype type based on apical control
-BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
+BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, float rainfall, float temperature)
 {
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
 	// For now we are passing in values based on plant age solely instead
-	float r = prototypes.size();
-	float lowerBound = std::max(lambda - r, 0.0f);
-	float upperBound = std::min(lambda + r, 1.0f);
 
-	float idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
+	float r = prototypes.size();
+	float lowerBound = std::max(lambda + rainfall - temperature - r, 0.0f);
+	float upperBound = std::min(lambda + rainfall - temperature + r, 1.0f);
+
+	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
+
 
 	//std::cout << std::to_string(lambda) + " " + std::to_string(determ) << std::endl;
 	//std::cout << std::to_string(a) + " " + std::to_string(b) << std::endl;

@@ -194,9 +194,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 }
 
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
-void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn) {
+void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn, float rainfall, float temperature) {
 	plant = p;
-	prototype = plant->copyPrototypeFromList(lambda, determ);
+	prototype = plant->copyPrototypeFromList(lambda, determ, rainfall, temperature);
 
 	currAgeRange = prototype->getRangeAtIdx(0);
 	root = prototype->getShapeAtIdx(0);
@@ -285,7 +285,7 @@ void SOP_Branch::setAge(float changeInAge) {
 				
 
 				// Set by rainfall and temperature parameters
-				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f, rootIndex);
+				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f, rootIndex, rainfall, temperature);
 
 				
 				newModule->setParentModule(this, terminalNode);

@@ -34,7 +34,7 @@ public:
     static CH_LocalVariable	 myVariables[];
 
 	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
-	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn);
+	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn, float rainfall, float temperature);
 
 	/// While setting the parent module, also alters current node data based on last branch
 	void setParentModule(SOP_Branch* parModule, BNode* connectingNode = nullptr);
