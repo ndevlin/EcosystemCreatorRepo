@@ -188,8 +188,9 @@ void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
 	//}
 	//fourD.invert();
 
+	// Same effect
 	moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
-	//moduleAgent->setWorldTransform(fourD, currNode->getRigIndex());
+	//moduleAgent->setWorldTransform(currNode->getWorldTransform(), currNode->getRigIndex());
 
 	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
 		setTransforms(child);

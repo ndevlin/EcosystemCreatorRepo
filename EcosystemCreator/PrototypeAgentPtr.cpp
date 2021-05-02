@@ -233,13 +233,13 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 	// FINALLY doing transforms here
 	for (int i = 0; i < numRegions; i++) {
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
-		std::shared_ptr<BNode> parent = currNode->getParent();
+		//std::shared_ptr<BNode> parent = currNode->getParent();
 
 		// Endpoints of the prior branch segment
-		UT_Vector3 parentPos;
-		if (parent) { parentPos = parent->getPos(); }
-		UT_Vector3 currPos = currNode->getPos();
-		jointOrigins.push_back(currPos);
+		//UT_Vector3 parentPos;
+		//if (parent) { parentPos = parent->getPos(); }
+		//UT_Vector3 currPos = currNode->getPos();
+		//jointOrigins.push_back(currPos);
 
 		// Calculate angle of joint in world coordinate frame
 		/*UT_Matrix3 jointRotWorld = UT_Matrix3(1.0);
@@ -267,9 +267,10 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		}*/
 		
 		///
+		jointOrigins.push_back(currNode->getPos());
 		UT_Matrix4 jointTrans = currNode->getLocalTransform();
 
-		if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 7) {
+		if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 13) {
 			std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
 
 			UT_Matrix4 temp = currNode->getWorldTransform();
@@ -284,8 +285,8 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 						 std::to_string(temp(3, 2)) + ", " + std::to_string(temp(3, 3)) << std::endl;
 		}
 		///
-
-		jointTrans.invert();
+		jointTrans.invertKramer();
+		//jointTrans.invert();
 
 		GEO_CaptureBoneStorage boneTrans;
 		boneTrans.myXform *= jointTrans;
@@ -310,7 +311,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		UT_Vector3 pt = gdp->getPos3(ptoff);
 
 		float closestDist = std::numeric_limits<float>::max();
-		int closestRegion = 0;
+		int closestRegion = -1;
 
 		for (int i = 0; i < numRegions; i++) {
 			float dist = (jointOrigins.at(i) - pt).length();
@@ -332,14 +333,20 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			}*/
 		}
 
+		bool missedI = true;
+
 		for (int i = 0; i < numRegions; i++) {
 			// The point's region index
 			weights->setIndex(captAttr, ptoff, i, i); // entry, region
 			if (i == closestRegion) {
 				weights->setData(captAttr, ptoff, i, 1.f);
+				missedI = false;
 			} else {
 				weights->setData(captAttr, ptoff, i, 0.f);
 			}
+		}
+		if (missedI) {
+			std::cout << "MAYDAYMAYDAY MIN JOINT NOT SET" << std::endl;
 		}
 	}
 }
