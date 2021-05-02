@@ -147,7 +147,7 @@ void SOP_Branch::traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNod
 }
 
 void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
-	std::shared_ptr<BNode> parent = currNode->getParent();
+	/*std::shared_ptr<BNode> parent = currNode->getParent();
 
 	UT_Vector3 start;
 	if (parent) { start = parent->getPos(); }
@@ -168,7 +168,7 @@ void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
 	// TODO maybe store previous transformation so there's no weird twisting. If there is
 
 	UT_Matrix4 fourD = UT_Matrix4(transform);
-	fourD.setTranslates(end);
+	fourD.setTranslates(end);*/
 	//if (parent) { fourD.setTranslates(end - start); }
 	//else {
 	//	fourD.setTranslates(end);
@@ -188,8 +188,8 @@ void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
 	//}
 	//fourD.invert();
 
-	//moduleAgent->setLocalTransform(fourD, currNode->getRigIndex());
-	moduleAgent->setWorldTransform(fourD, currNode->getRigIndex());
+	moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
+	//moduleAgent->setWorldTransform(fourD, currNode->getRigIndex());
 
 	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
 		setTransforms(child);
@@ -282,6 +282,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 			GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
 			moduleAgent->setCurrentLayer(packedPrim, currLayer);
+			// TODO - only if age !=0, or? if !init_agent ?? - check why it looks weird
 			//setTransforms(root);
 			std::cout << "Reached5" << std::endl;
 

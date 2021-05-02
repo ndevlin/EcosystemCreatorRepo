@@ -207,11 +207,37 @@ void BNode::setRigIndex(int idx)
 
 
 UT_Matrix4 BNode::getWorldTransform() {
-	return UT_Matrix4();
+	if (!parent) {
+		return getLocalTransform();
+	}
+	return getLocalTransform() * parent->getWorldTransform();
 }
 
 UT_Matrix4 BNode::getLocalTransform() {
-	return UT_Matrix4();
+	UT_Matrix4 translate = UT_Matrix4(1.0f);
+	if (!parent) {
+		translate.setTranslates(position);
+		return translate;
+	}
+
+	UT_Vector3 currDir = position - parent->getPos();
+	//translate.setTranslates(position - parent->getPos());
+	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
+
+	UT_Vector3 parentDir;
+	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
+	else					 { parentDir = parent->getDir(); }
+
+	UT_Vector3 c = UT_Vector3();
+
+	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
+	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
+
+	UT_Matrix4 transform = UT_Matrix4(orientation3);
+	transform.preMultiply(translate);
+	//transform *= translate;
+
+	return transform;
 }
 
 /// More forms of updating

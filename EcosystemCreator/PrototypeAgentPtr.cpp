@@ -162,10 +162,12 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	}
 
 	for (int i = 2; i < inOrder.size() + 1; i++) { 	// 0 = skin, 1 = root
+	//for (int i = 1; i < inOrder.size(); i++) {
+		//children.append(inOrder.at(i)->getRigIndex());
 		children.append(i);
 	}
 
-	/*// Iterators
+	// Iterators
 	std::cout << "Num names: " + std::to_string(names.size()) << std::endl;
 	int c = 0;
 	UT_Array<UT_StringHolder>::iterator ptr;
@@ -189,7 +191,6 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 		std::cout << std::to_string(c) + " " + std::to_string(*ptr2) << std::endl;
 		c++;
 	}
-	c = 0;*/
 
 	if (!rig->construct(names, child_counts, children)) {
 		std::cout << "Error in rig construction" << std::endl;
@@ -241,7 +242,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		jointOrigins.push_back(currPos);
 
 		// Calculate angle of joint in world coordinate frame
-		UT_Matrix3 jointRotWorld = UT_Matrix3(1.0);
+		/*UT_Matrix3 jointRotWorld = UT_Matrix3(1.0);
 		jointRotWorld.lookat(UT_Vector3(0.0f, 0.0f, 0.0f), currNode->getDir(), UT_Axis3::ZAXIS);
 		jointRotWorld.prerotate<UT_Axis3::XAXIS>(-1.571);
 		
@@ -263,7 +264,26 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			// And recalculate current transformation to be in respect to the parent joint
 			parentTrans.invert();
 			jointTrans *= parentTrans;
+		}*/
+		
+		///
+		UT_Matrix4 jointTrans = currNode->getLocalTransform();
+
+		if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 7) {
+			std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
+
+			UT_Matrix4 temp = currNode->getWorldTransform();
+			
+			std::cout << std::to_string(temp(0, 0)) + ", " + std::to_string(temp(0, 1)) + ", " +
+						 std::to_string(temp(0, 2)) + ", " + std::to_string(temp(0, 3)) << std::endl;
+			std::cout << std::to_string(temp(1, 0)) + ", " + std::to_string(temp(1, 1)) + ", " +
+						 std::to_string(temp(1, 2)) + ", " + std::to_string(temp(1, 3)) << std::endl;
+			std::cout << std::to_string(temp(2, 0)) + ", " + std::to_string(temp(2, 1)) + ", " +
+						 std::to_string(temp(2, 2)) + ", " + std::to_string(temp(2, 3)) << std::endl;
+			std::cout << std::to_string(temp(3, 0)) + ", " + std::to_string(temp(3, 1)) + ", " +
+						 std::to_string(temp(3, 2)) + ", " + std::to_string(temp(3, 3)) << std::endl;
 		}
+		///
 
 		jointTrans.invert();
 
