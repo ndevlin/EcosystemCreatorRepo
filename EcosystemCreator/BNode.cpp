@@ -22,25 +22,31 @@ float BNode::getG2() {
 /// Constructors
 BNode::BNode() 
 	: position(0.0), age(0.0), maxLength(3.0), thickness(0.1), 
-		parent(nullptr), children(), connectedModules()
+		parent(nullptr), children(), connectedModules(), rigIndex(-1)
 {}
 
 BNode::BNode(BNode* other)
-	: BNode(other->getPos(), other->getDir(), other->getAge(),
-		other->getMaxLength(), other->getBaseRadius())
-{}
+	: position(other->getPos()), unitDir(other->getDir()), age(other->getAge()), 
+		maxLength(other->getMaxLength()), thickness(other->getBaseRadius()), 
+		baseRadius(other->getBaseRadius()), rigIndex(other->getRigIndex()),
+		parent(nullptr), children(), connectedModules()
+	//: BNode(other->getPos(), other->getDir(), other->getAge(),
+	//	other->getMaxLength(), other->getBaseRadius())
+{
+	//rigIndex = other->getRigIndex();
+}
 
 BNode::BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick)
 	: position(pos), unitDir(dir), age(branchAge), maxLength(length),
 		thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules()
+		parent(nullptr), children(), connectedModules(), rigIndex(-1)
 {
 	unitDir.normalize();
 }
 
 BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick)
 	: age(branchAge), maxLength(length), thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules()
+		parent(nullptr), children(), connectedModules(), rigIndex(-1)
 {
 	position = UT_Vector3();
 	position(0) = end[0];
@@ -51,6 +57,11 @@ BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick)
 	unitDir(0) = end[0] - start[0];
 	unitDir(1) = end[1] - start[1];
 	unitDir(2) = end[2] - start[2];
+	if (abs(unitDir.length2()) < 0.000001f) {
+		unitDir(0) = 0.f;
+		unitDir(1) = 1.f;
+		unitDir(2) = 0.f;
+	}
 	unitDir.normalize();
 }
 
@@ -58,9 +69,9 @@ BNode::~BNode() {
 	if (this->parent != nullptr) {
 		// TODO remove this from parent list prob
 	}
-	for (BNode* child : children) {
+	for (std::shared_ptr<BNode> child : children) {
 		child->setParent(nullptr);
-		delete child;
+		//delete child;
 	}
 	for (SOP_Branch* connectedModule : connectedModules) {
 		connectedModule->destroySelf();
@@ -68,24 +79,27 @@ BNode::~BNode() {
 	}
 }
 
-BNode* BNode::deepCopy(BNode* par) {
-	BNode* newNode = new BNode(this);
+std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
+	std::shared_ptr<BNode> newNode(new BNode(this));
 	newNode->setParent(par);
 
-	for (BNode* child : children) {
-		BNode* copyChild = child->deepCopy(newNode);
+	for (std::shared_ptr<BNode> child : children) {
+		std::shared_ptr<BNode> copyChild = child->deepCopy(newNode);
 		newNode->addChild(copyChild);
+		//if (copyChild->getParent()) {
+		//	std::cout << "has parent in copy" << std::endl;
+		//}
 	}
 	return newNode;
 }
 
 /// SETTERS
-void BNode::setParent(BNode* par)
+void BNode::setParent(std::shared_ptr<BNode> par) // TODO make ref to shared
 {
 	parent = par;
 }
 
-void BNode::addChild(BNode* child)
+void BNode::addChild(std::shared_ptr<BNode> child)
 {
 	children.push_back(child);
 }
@@ -96,7 +110,7 @@ void BNode::addModuleChild(SOP_Branch* child) {
 
 // Adjust all new age-based calculations
 void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange, 
-	std::vector<BNode*>& terminalNodes, bool mature, bool decay) {
+	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
 	age += changeInAge;
 
 	// For full branch-segments only, update length and position:
@@ -124,13 +138,13 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	thickness = max(0.015f, age * baseRadius * 0.3f);
 
 	// Update children
-	for (BNode* child : children) {
+	for (std::shared_ptr<BNode> child : children) {
 		child->setAge(changeInAge, ageRange, terminalNodes, mature, decay);
 	}
 
 	if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {
 		// TODO base addition on vigor
-		terminalNodes.push_back(this);
+		terminalNodes.push_back(shared_from_this());
 	}
 	// Clear/cull modules if it is not mature (rewinding of time) or TODO if vigor drops too low
 	else if (decay && !connectedModules.empty()) {
@@ -143,11 +157,11 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 }
 
 /// GETTERS
-BNode* BNode::getParent() {
+std::shared_ptr<BNode> BNode::getParent() {
 	return parent;
 }
 
-std::vector<BNode*>& BNode::getChildren() {
+std::vector<std::shared_ptr<BNode>>& BNode::getChildren() {
 	return children;
 }
 
@@ -176,25 +190,70 @@ float BNode::getThickness()
 	return thickness;
 }
 
-float BNode::getBaseRadius() 
+float BNode::getBaseRadius()
 {
 	return baseRadius;
+}
+
+int BNode::getRigIndex()
+{
+	return rigIndex;
+}
+
+void BNode::setRigIndex(int idx)
+{
+	rigIndex = idx;
+}
+
+
+UT_Matrix4 BNode::getWorldTransform() {
+	if (!parent) {
+		return getLocalTransform();
+	}
+	return getLocalTransform() * parent->getWorldTransform();
+}
+
+UT_Matrix4 BNode::getLocalTransform() {
+	UT_Matrix4 translate = UT_Matrix4(1.0f);
+	if (!parent) {
+		translate.setTranslates(position);
+		return translate;
+	}
+
+	UT_Vector3 currDir = position - parent->getPos();
+	//translate.setTranslates(position - parent->getPos());
+	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
+
+	UT_Vector3 parentDir;
+	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
+	else					 { parentDir = parent->getDir(); }
+
+	UT_Vector3 c = UT_Vector3();
+
+	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
+	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
+
+	UT_Matrix4 transform = UT_Matrix4(orientation3);
+	transform.preMultiply(translate);
+	//transform *= translate;
+
+	return transform;
 }
 
 /// More forms of updating
 void BNode::recThicknessUpdate(float radiusMultiplier) {
 	baseRadius *= radiusMultiplier;
-	for (BNode* child : children) { child->recThicknessUpdate(radiusMultiplier); }
+	for (std::shared_ptr<BNode> child : children) { child->recThicknessUpdate(radiusMultiplier); }
 }
 
 // experimental
 void BNode::recLengthUpdate(float lengthMultiplier) {
 	maxLength *= lengthMultiplier;
-	for (BNode* child : children) { child->recLengthUpdate(lengthMultiplier); }
+	for (std::shared_ptr<BNode> child : children) { child->recLengthUpdate(lengthMultiplier); }
 }
 
 // experimental #2
 void BNode::recRotate(UT_Matrix3& rotation) {
 	unitDir = rowVecMult(unitDir, rotation);
-	for (BNode* child : children) { child->recRotate(rotation); }
+	for (std::shared_ptr<BNode> child : children) { child->recRotate(rotation); }
 }

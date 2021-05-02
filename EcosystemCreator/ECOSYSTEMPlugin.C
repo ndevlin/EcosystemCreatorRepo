@@ -428,7 +428,10 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 void OBJ_Plant::setPrototypeList() {
 	// TODO don't create one here. Take as an input and share across plant instances
 	// Dont allow plant loading without that
-	prototypeSet = new PrototypeSet();
+	// Decide on a path
+	UT_String path;
+	getFullPath(path);
+	prototypeSet = new PrototypeSet(path);
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {

@@ -53,7 +53,8 @@ SOP_Branch::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
-	: SOP_Node(net, name, op), parentModule(nullptr), childModules()
+	: SOP_Node(net, name, op), parentModule(nullptr), childModules(),
+	init_agent(true), change_agent(true)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 }
@@ -67,8 +68,8 @@ SOP_Branch::disableParms()
 }
 
 /// Traverse all nodes in this module to create cylinder geometry
-void SOP_Branch::traverseAndBuild(GU_Detail* gdp, BNode* currNode, int divisions) {
-	BNode* parent = currNode->getParent();
+void SOP_Branch::traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNode, int divisions) {
+	std::shared_ptr<BNode> parent = currNode->getParent();
 
 	UT_Vector3 start;
 	if (parent) { start = parent->getPos(); }
@@ -140,8 +141,71 @@ void SOP_Branch::traverseAndBuild(GU_Detail* gdp, BNode* currNode, int divisions
 		}
 	}
 
-	for (BNode* child : currNode->getChildren()) {
+	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
 		traverseAndBuild(gdp, child, divisions);
+	}
+}
+
+void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
+	/*std::shared_ptr<BNode> parent = currNode->getParent();
+
+	UT_Vector3 start;
+	if (parent) { start = parent->getPos(); }
+	UT_Vector3 end = currNode->getPos();
+
+	// Calculate angle of joint
+	UT_Matrix3 transform = UT_Matrix3(1.0);
+	if (parent) { transform.lookat(end, start, UT_Axis3::ZAXIS); }
+	else {
+		// Or have it flat by default TODO change to using getDir
+		UT_Vector3 look;
+		look(0) = end(0);
+		look(1) = end(1) + 1.0;
+		look(2) = end(2);
+		transform.lookat(end, look, UT_Axis3::ZAXIS);
+	}
+	transform.prerotate<UT_Axis3::XAXIS>(-1.571);
+	// TODO maybe store previous transformation so there's no weird twisting. If there is
+
+	UT_Matrix4 fourD = UT_Matrix4(transform);
+	fourD.setTranslates(end);*/
+	//if (parent) { fourD.setTranslates(end - start); }
+	//else {
+	//	fourD.setTranslates(end);
+
+		/*std::cout << "Root: " + std::to_string(end(0)) + ", " +
+			std::to_string(end(1)) + ", " + std::to_string(end(2)) << std::endl;
+		std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
+
+		std::cout << std::to_string(fourD(0, 0)) + ", " + std::to_string(fourD(0, 1)) + ", " +
+					 std::to_string(fourD(0, 2)) + ", " + std::to_string(fourD(0, 3)) << std::endl;
+		std::cout << std::to_string(fourD(1, 0)) + ", " + std::to_string(fourD(1, 1)) + ", " +
+					 std::to_string(fourD(1, 2)) + ", " + std::to_string(fourD(1, 3)) << std::endl;
+		std::cout << std::to_string(fourD(2, 0)) + ", " + std::to_string(fourD(2, 1)) + ", " +
+					 std::to_string(fourD(2, 2)) + ", " + std::to_string(fourD(2, 3)) << std::endl;
+		std::cout << std::to_string(fourD(3, 0)) + ", " + std::to_string(fourD(3, 1)) + ", " +
+					 std::to_string(fourD(3, 2)) + ", " + std::to_string(fourD(3, 3)) << std::endl;*/
+	//}
+	//fourD.invert();
+
+	// Same effect
+	moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
+	//moduleAgent->setWorldTransform(currNode->getWorldTransform(), currNode->getRigIndex());
+
+	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
+		setTransforms(child);
+	}
+}
+
+
+// Doesn't work TODO - delete
+void getPosArray(GU_Agent* moduleA, std::shared_ptr<BNode> currNode, std::vector<UT_Vector3>* posArray) {
+	UT_Matrix4 transf = UT_Matrix4(1.0f);
+	moduleA->computeWorldTransform(transf, currNode->getRigIndex(), false);
+	posArray->push_back(UT_Vector3(transf(0, 3), transf(1, 3), transf(2, 3)));
+
+	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
+		getPosArray(moduleA, child, posArray);
 	}
 }
 
@@ -177,9 +241,76 @@ SOP_Branch::cookMySop(OP_Context &context)
 		if (boss->opStart("Building ECOSYSTEM"))
 		{
 			// Traverse the node structure and make a cylinder for each branch
-			traverseAndBuild(gdp, root, divisions); // TODO only do for child nodes
+			//traverseAndBuild(gdp, root, divisions); // TODO only do for child nodes
 			// Else is a Seed or has no starting structure
-			
+			//if (init_agent) {
+			init_agent = false;
+			std::cout << "Reached1" << std::endl;
+
+			GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
+			//gdp->destroyPrimitives(gdp->getPrimitiveRange());
+			GA_Offset ptoff = pointModule->getPointOffset(0);
+			UT_Vector3 pt;
+			pt(0) = 0.0;
+			pt(1) = 0.0;
+			pt(2) = 0.0;
+			gdp->setPos3(ptoff, pt);
+
+			// TEST
+			//gdp->destroyPrimitives(gdp->getPrimitiveRange());
+			//GA_Offset ptoff2;
+			//for (GA_Offset ptoff3 : gdp->getPointRange()) {
+			//	ptoff2 = ptoff3;
+			//	break;
+			//}
+
+			packedPrim = GU_Agent::agent(*gdp, ptoff);//2);
+			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
+			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
+			gdp->getPrimitiveList().bumpDataId();
+			std::cout << "Reached2" << std::endl;
+
+			moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
+			std::cout << "Reached3" << std::endl;
+			//}
+			//if (change_agent) {
+			change_agent = false;
+			int currIdx = prototype->getIdxAtTimestep(root->getAge());
+			std::cout << std::to_string(currIdx) << std::endl;
+			GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
+			moduleAgent->setDefinition(packedPrim, ptrTemp);
+			std::cout << "Reached4" << std::endl;
+
+			GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
+			moduleAgent->setCurrentLayer(packedPrim, currLayer);
+			// TODO - only if age !=0, or? if !init_agent ?? - check why it looks weird
+			setTransforms(root);
+			std::cout << "Reached5" << std::endl;
+
+			//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
+			gdp->getPrimitiveList().bumpDataId();
+			//moduleAgent->getRig()->findTransform()
+
+			/*// Looking at stuff
+			//const int n = moduleAgent->intrinsicTransformsArraySize(packedPrim);
+			float dataD[40];
+			float* data = dataD;
+			std::cout << "PRINTING TRANS" << std::endl;
+			moduleAgent->worldTransformsArray(packedPrim, data, 40);
+			for (int aaa = 0; aaa < 40; aaa++) {
+				//std::cout << std::to_string(*(data + aaa)) << std::endl;
+			}
+			*/
+
+			/*std::vector<UT_Vector3> posArray = std::vector<UT_Vector3>();
+			getPosArray(moduleAgent, root, &posArray);
+			std::cout << "PRINTING TRANS" << std::endl;
+			for (int aa = 0; aa < posArray.size(); aa++) {
+				std::cout << "Some Joint: " + std::to_string(posArray.at(aa)(0)) + ", " +
+											  std::to_string(posArray.at(aa)(1)) + ", " + 
+											  std::to_string(posArray.at(aa)(2)) << std::endl;
+			}*/
+
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
 		}
@@ -199,22 +330,22 @@ void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, 
 	prototype = plant->copyPrototypeFromList(lambda, determ, rainfall, temperature);
 
 	currAgeRange = prototype->getRangeAtIdx(0);
-	root = prototype->getShapeAtIdx(0);
-	rootIndex = rootIndexIn;
+
+	root = prototype->getRootAtIdx(0);
 }
 
 /// While setting the parent module, also alters current node data based on last branch
-void SOP_Branch::setParentModule(SOP_Branch* parModule, BNode* connectingNode) {
+void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode) {
 	parentModule = parModule;
 	if (connectingNode) { 
 		// Get starting radius of model
 		bool adjustRadius = connectingNode->getBaseRadius() !=
-			prototype->getShapeAtIdx(0)->getBaseRadius();
+			prototype->getRootAtIdx(0)->getBaseRadius();
 
 		float radiusMultiplier;
 		if (adjustRadius) { 
 			radiusMultiplier = connectingNode->getBaseRadius() /
-				prototype->getShapeAtIdx(0)->getBaseRadius();
+				prototype->getRootAtIdx(0)->getBaseRadius();
 		}
 
 		// Get starting orientation of model based off of parent branch
@@ -228,16 +359,16 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, BNode* connectingNode) {
 
 		// Update the values for each prototype age
 		for (int i = 0; i < prototype->getNumAges(); i++) {
-			prototype->getShapeAtIdx(i)->setParent(connectingNode);
+			prototype->getRootAtIdx(i)->setParent(connectingNode);
 
 			if (adjustRadius) {
-				prototype->getShapeAtIdx(i)->recThicknessUpdate(radiusMultiplier);
+				prototype->getRootAtIdx(i)->recThicknessUpdate(radiusMultiplier);
 			}
 			// experimental
-			prototype->getShapeAtIdx(i)->recLengthUpdate(connectingNode->getMaxLength() * 0.8);
+			prototype->getRootAtIdx(i)->recLengthUpdate(connectingNode->getMaxLength() * 0.8);
 
 			// experimental#2
-			prototype->getShapeAtIdx(i)->recRotate(transform);
+			prototype->getRootAtIdx(i)->recRotate(transform);
 		}
 	}
 }
@@ -253,7 +384,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		// Check that we have the right prototype age
 		if (ageVal >= prototype->getMaturityAge()) {
 			// Double check that node is from the oldest prototype
-			root = prototype->getShapeAtIdx(prototype->getNumAges() - 1);
+			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
 			mature = (root->getAge() < prototype->getMaturityAge()); 
 			// ^only if it was immature in the prior step - TODO change when adding vigor
 		}
@@ -262,7 +393,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		}
 
 		// if mature, get terminal nodes to connect to with more modules
-		std::vector<BNode*> terminalNodes = std::vector<BNode*>();
+		std::vector<std::shared_ptr<BNode>> terminalNodes = std::vector<std::shared_ptr<BNode>>();
 		//std::vector<SOP_Branch*> newModules = std::vector<SOP_Branch*>();
 
 		// Set the present age along the tree and adjusts current point calculations
@@ -270,7 +401,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		root->setAge(changeInAge, currAgeRange, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
-			for (BNode* terminalNode : terminalNodes) {
+			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
 
 				newModule->moveToGoodPosition();
@@ -330,11 +461,13 @@ void SOP_Branch::setRootByAge(float time) {
 	if (prototype) {
 		int idx = prototype->getIdxAtTimestep(time);
 		currAgeRange = prototype->getRangeAtIdx(idx);
-		root = prototype->getShapeAtIdx(idx);
+		root = prototype->getRootAtIdx(idx);
 	}
 }
 
 void SOP_Branch::destroySelf() {
 	// TODO Maybe also deleteData? And make sure to remove from merger
+	disconnectAllInputs();
+	disconnectAllOutputs();
 	plant->destroyNode(this);
 }

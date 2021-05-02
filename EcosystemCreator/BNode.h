@@ -1,5 +1,6 @@
 #ifndef BNode_H_
 #define BNode_H_
+#include <memory>
 #include <string>
 #include <vector>
 #include <map>
@@ -12,7 +13,7 @@ namespace HDK_Sample {
 using namespace HDK_Sample;
 
 // These graph nodes surround each branch "segment"
-class BNode
+class BNode : std::enable_shared_from_this<BNode>
 {
 public:
 	static float g1;
@@ -31,20 +32,20 @@ public:
 	~BNode();
 
 	// TODO wow the lack of const correctness. Make things safer
-	BNode* deepCopy(BNode* par);
+	std::shared_ptr<BNode> deepCopy(std::shared_ptr<BNode> par);
 
 	// Adjusting graph structure
-	void setParent(BNode* par);
-	void addChild(BNode* child);
+	void setParent(std::shared_ptr<BNode> par);
+	void addChild(std::shared_ptr<BNode> child);
 	void addModuleChild(SOP_Branch* child);
 
 	// Adjust all new age-based calculations - Called from module
 	void setAge(float changeInAge, std::pair<float, float>& ageRange,
-		std::vector<BNode*>& terminalNodes, bool mature, bool decay);
+		std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay);
 
 	// Getters for important variables
-	BNode* getParent();
-	std::vector<BNode*>& getChildren();
+	std::shared_ptr<BNode> getParent();
+	std::vector<std::shared_ptr<BNode>>& getChildren();
 
 	UT_Vector3 getPos();
 	UT_Vector3 getDir();
@@ -55,6 +56,12 @@ public:
 	float getThickness(); 
 	float getBaseRadius();
 
+	int getRigIndex();
+	void setRigIndex(int idx);
+
+	UT_Matrix4 getWorldTransform();
+	UT_Matrix4 getLocalTransform();
+
 	// Recursive adjustments to core variables. Important in setting up child modules
 	void recThicknessUpdate(float radiusMultiplier);
 	void recLengthUpdate(float lengthMultiplier);
@@ -63,8 +70,8 @@ public:
 private:
 	// Every node has up to one parent, but may have outgoing connections to
 	// both nodes or modules
-	BNode* parent;
-	std::vector<BNode*> children;
+	std::shared_ptr<BNode> parent;
+	std::vector<std::shared_ptr<BNode>> children;
 	std::vector<SOP_Branch*> connectedModules;
 
 	UT_Vector3 position;
@@ -75,5 +82,7 @@ private:
 
 	float thickness;
 	float baseRadius;
+
+	int rigIndex;
 };
 #endif
