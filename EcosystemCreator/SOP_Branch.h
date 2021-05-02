@@ -110,6 +110,8 @@ private:
 
 	std::shared_ptr<BNode> root;
 
+	int rootIndex;
+
 	SOP_Branch* parentModule;
 	std::vector<SOP_Branch*> childModules;
 };
