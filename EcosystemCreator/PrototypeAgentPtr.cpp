@@ -209,8 +209,8 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 
 	// Create joint regions and, for now, bind them to everything - TODO clean up
 	int numRegions = inOrder.size();
-	GEO_Detail::geo_NPairs pointDataPairs(numRegions);
-	//GEO_Detail::geo_NPairs pointDataPairs(1);
+	//GEO_Detail::geo_NPairs pointDataPairs(numRegions);
+	GEO_Detail::geo_NPairs pointDataPairs(1);
 
 	GA_RWAttributeRef captAttr = gdp->addPointCaptureAttribute(pointDataPairs);
 
@@ -304,14 +304,14 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 
 	// And now weights
 	const GA_AIFIndexPair* weights = captAttr->getAIFIndexPair();
-	weights->setEntries(captAttr, numRegions);
+	weights->setEntries(captAttr, 1);//numRegions);
 
 	// TODO change to nearest joint only (or nearest joint plus parent and children?)
 	for (GA_Offset ptoff : gdp->getPointRange()) {
 		UT_Vector3 pt = gdp->getPos3(ptoff);
 
 		float closestDist = std::numeric_limits<float>::max();
-		int closestRegion = -1;
+		int closestRegion = 0;//-1;
 
 		for (int i = 0; i < numRegions; i++) {
 			float dist = (jointOrigins.at(i) - pt).length();
@@ -333,21 +333,24 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			}*/
 		}
 
-		bool missedI = true;
+		/*//bool missedI = true;
 
 		for (int i = 0; i < numRegions; i++) {
 			// The point's region index
 			weights->setIndex(captAttr, ptoff, i, i); // entry, region
 			if (i == closestRegion) {
 				weights->setData(captAttr, ptoff, i, 1.f);
-				missedI = false;
+				//missedI = false;
 			} else {
 				weights->setData(captAttr, ptoff, i, 0.f);
 			}
 		}
-		if (missedI) {
-			std::cout << "MAYDAYMAYDAY MIN JOINT NOT SET" << std::endl;
-		}
+		//if (missedI) {
+		//	std::cout << "MAYDAYMAYDAY MIN JOINT NOT SET" << std::endl;
+		//}*/
+
+		weights->setIndex(captAttr, ptoff, 0, closestRegion); // entry, region
+		weights->setData(captAttr, ptoff, 0, 1.f);
 	}
 }
 

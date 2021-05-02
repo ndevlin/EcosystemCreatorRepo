@@ -284,7 +284,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 			GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
 			moduleAgent->setCurrentLayer(packedPrim, currLayer);
 			// TODO - only if age !=0, or? if !init_agent ?? - check why it looks weird
-			//setTransforms(root);
+			setTransforms(root);
 			std::cout << "Reached5" << std::endl;
 
 			//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
