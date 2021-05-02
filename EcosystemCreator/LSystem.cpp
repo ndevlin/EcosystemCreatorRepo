@@ -173,7 +173,8 @@ LSystem::Turtle& LSystem::Turtle::operator=(const LSystem::Turtle& t)
     return *this;
 }
 
-void LSystem::Turtle::swapNode(BNode* newSegment) {
+void LSystem::Turtle::swapNode(std::shared_ptr<BNode> newSegment) {
+	newSegment->setParent(currSegment);
 	currSegment->addChild(newSegment);
 	currSegment = newSegment;
 }
@@ -213,12 +214,12 @@ void LSystem::Turtle::applyForwardRot(float degrees)
 
 
 
-BNode* LSystem::process(unsigned int n)
+std::shared_ptr<BNode> LSystem::process(unsigned int n)
 {
     Turtle turtle;
     std::stack<Turtle> stack;
 	// TODO input origin point, TODO check n or n - 1, thick
-	BNode* rootNode = new BNode(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), n, 0.0f, 0.1f);
+	std::shared_ptr<BNode> rootNode = std::make_shared<BNode>(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), n, 0.0f, 0.1f);
 	turtle.currSegment = rootNode;
 
     // Init so we're pointing up
@@ -244,8 +245,9 @@ BNode* LSystem::process(unsigned int n)
 				sym = insn.substr(i + 1, 1);
 			}
 
-			BNode* newSegment = new BNode(start, turtle.pos, iterationAge,
-				mDfltStep, turtle.currSegment->getBaseRadius() * 0.9);
+			std::shared_ptr<BNode> newSegment = std::make_shared<BNode>(start, 
+				turtle.pos, iterationAge, mDfltStep, 
+				turtle.currSegment->getBaseRadius() * 0.9);
 			turtle.swapNode(newSegment);
         }
         else if (sym == "+")

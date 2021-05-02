@@ -146,7 +146,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	int numPlants = 3;
+	int numPlants = 1;//3;
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -384,7 +384,10 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 void OBJ_Plant::setPrototypeList() {
 	// TODO don't create one here. Take as an input and share across plant instances
 	// Dont allow plant loading without that
-	prototypeSet = new PrototypeSet();
+	// Decide on a path
+	UT_String path;
+	getFullPath(path);
+	prototypeSet = new PrototypeSet(path);
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {

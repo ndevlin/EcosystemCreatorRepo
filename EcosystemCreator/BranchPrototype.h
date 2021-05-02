@@ -1,15 +1,16 @@
 #ifndef BranchPrototype_H_
 #define BranchPrototype_H_
 #include "LSystem.h"
+#include "PrototypeAgentPtr.h"
 
 ///// INDIVIDUAL PROTOTYPES /////
 
 class BranchPrototype
 {
 public:
-	BranchPrototype();
-	BranchPrototype(const std::string& grammarProgram, int iterations); // From LSystem grammar
-	BranchPrototype(LSystem& lsystem, int iterations); // From existing LSystem
+	BranchPrototype(const char* path);
+	BranchPrototype(const std::string& grammarProgram, int iterations, const char* path); // From LSystem grammar
+	BranchPrototype(LSystem& lsystem, int iterations, const char* path); // From existing LSystem
 				 // TODO From existing node structure
 
 	// Deep copy
@@ -27,19 +28,28 @@ public:
 	int getIdxAtTimestep(float time);
 
 	/// Never used?
-	std::pair<float, float> getRangeAtTimestep(float time);
-	BNode* getShapeAtTimestep(float time);                 
+	//std::pair<float, float> getRangeAtTimestep(float time);
+	//BNode* getShapeAtTimestep(float time);                 
 
 	/// Get corresponding prototype values at index
 	std::pair<float, float> getRangeAtIdx(int i);
-	BNode* getShapeAtIdx(int i);
+	std::shared_ptr<BNode> getRootAtIdx(int i);
+	//GU_PrimPacked* getGeomAtIdx(int i);
+	GU_AgentDefinitionPtr getAgentDefAtIdx(int i);
 
 	/// Static helper to compare float to range
 	static bool isInRange(std::pair<float, float>& range, float time);
 
 private:
-	typedef std::pair<std::pair<float, float>, BNode*> AgeGraph;
+	typedef std::pair<std::pair<float, float>, std::shared_ptr<BNode>> AgeGraph;
+	//typedef std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr> AgentParams;
+
 	std::vector<AgeGraph> agedPrototypes;
+	//std::vector<AgentParams> agentData;
+	std::vector<GU_AgentDefinitionPtr> agentData;
+
+	/// Used to initialize geometry and agent definitions
+	void initAgentData(const char* path);
 
 	/// Used in L-System related constructors
 	void setFromLSystem(LSystem& lsystem, int iterations);
@@ -55,7 +65,7 @@ private:
 class PrototypeSet
 {
 public:
-	PrototypeSet();
+	PrototypeSet(const char* path);
 	// TODO add more constructors
 	~PrototypeSet() {}
 	
