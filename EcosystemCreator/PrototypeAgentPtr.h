@@ -26,6 +26,9 @@ namespace PrototypeAgentPtr
 	extern GU_Detail* generateGeom(std::shared_ptr<BNode> root);
 	extern void traverseAndBuildGeo(GU_Detail* geo, std::shared_ptr<BNode> currNode,
 		int divisions = 10);
+	// Different trial:
+	extern GU_Detail* buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder,
+		int divisions = 10);
 
 	extern GU_AgentRigPtr createRig(const char* path, std::shared_ptr<BNode> root,
 		std::vector<std::shared_ptr<BNode>>& inOrder);

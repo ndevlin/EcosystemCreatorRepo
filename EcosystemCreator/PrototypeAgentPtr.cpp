@@ -94,6 +94,65 @@ void PrototypeAgentPtr::traverseAndBuildGeo(GU_Detail* geo, std::shared_ptr<BNod
 	}
 }
 
+
+GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder, 
+	int divisions) {
+	GU_Detail* geo = new GU_Detail;
+
+	for (int i = 0; i < inOrder.size(); i++) {
+		std::shared_ptr<BNode> currNode = inOrder.at(i);
+		std::shared_ptr<BNode> parent = currNode->getParent();
+		if (!parent) { continue; }
+
+		std::vector<UT_Vector3> parentCircle = std::vector<UT_Vector3>();
+		std::vector<UT_Vector3> currCircle = std::vector<UT_Vector3>();
+
+		UT_Matrix3 transform = UT_Matrix3(currNode->getWorldTransform());
+
+		// Create angled circle shapes
+		float ang = M_PI * 2 / divisions;
+		for (int i = 0; i < divisions; i++) {
+			// Get point along a circle
+			UT_Vector3 point;
+			point(0) = cos(ang * i);
+			point(1) = 0.0f;
+			point(2) = -sin(ang * i);
+			// rotate to match the branch
+			point = rowVecMult(point * 0.1f, transform);
+
+			parentCircle.push_back(parent->getPos() + point);
+			currCircle.push_back(currNode->getPos() + point);
+		}
+
+		GU_PrimPoly* polyParentCircle = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
+		GU_PrimPoly* polyCurrCircle = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
+
+		for (int j = 0; j < divisions; j++) {
+			GA_Offset ptoffPar = polyParentCircle->getPointOffset(j);
+			geo->setPos3(ptoffPar, parentCircle.at(j));
+
+			GA_Offset ptoffCurr = polyCurrCircle->getPointOffset(j);
+			geo->setPos3(ptoffCurr, currCircle.at(j));
+
+			// Set individual rectangle faces
+			GU_PrimPoly* polyRect = GU_PrimPoly::build(geo, 4, GU_POLY_CLOSED);
+
+			for (int k = 0; k < 2; k++) {
+				GA_Offset ptoffRect = polyRect->getPointOffset(k);
+				geo->setPos3(ptoffRect, parentCircle.at((j + k) % divisions));
+			}
+
+			for (int k = 0; k < 2; k++) {
+				GA_Offset ptoffRect = polyRect->getPointOffset(k + 2);
+				geo->setPos3(ptoffRect, currCircle.at((j + 1 - k) % divisions));
+			}
+		}
+	}
+
+	return geo;
+}
+
+
 // Inspired by GeeksforGeeks
 int recNumLevels(std::shared_ptr<BNode> currNode) {
 	if (currNode) {
@@ -148,7 +207,6 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 
 	for (int i = 0; i < inOrder.size(); i++) {
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
-		//std::cout << std::to_string(names.size()) + " Height: " + std::to_string(currNode->getPos().length()) << std::endl;
 		currNode->setRigIndex(names.size());
 
 		if (i == 0) {
@@ -233,44 +291,11 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 	// FINALLY doing transforms here
 	for (int i = 0; i < numRegions; i++) {
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
-		//std::shared_ptr<BNode> parent = currNode->getParent();
-
-		// Endpoints of the prior branch segment
-		//UT_Vector3 parentPos;
-		//if (parent) { parentPos = parent->getPos(); }
-		//UT_Vector3 currPos = currNode->getPos();
-		//jointOrigins.push_back(currPos);
-
-		// Calculate angle of joint in world coordinate frame
-		/*UT_Matrix3 jointRotWorld = UT_Matrix3(1.0);
-		jointRotWorld.lookat(UT_Vector3(0.0f, 0.0f, 0.0f), currNode->getDir(), UT_Axis3::ZAXIS);
-		jointRotWorld.prerotate<UT_Axis3::XAXIS>(-1.571);
-		
-		// Full joint transformation
-		UT_Matrix4 jointTrans = UT_Matrix4(jointRotWorld);
-		jointTrans.setTranslates(currPos);
-
-		// Incorporate translation ^
-		if (parent) {
-			//jointTrans.setTranslates(currPos);// -parentPos);
-			// Calculate the parent coordinate frame
-			UT_Matrix3 parentRot = UT_Matrix3(1.0);
-			parentRot.lookat(UT_Vector3(0.0f, 0.0f, 0.0f), parent->getDir(), UT_Axis3::ZAXIS);
-			parentRot.prerotate<UT_Axis3::XAXIS>(-1.571);
-			
-			UT_Matrix4 parentTrans = UT_Matrix4(parentRot);
-			parentTrans.setTranslates(parentPos);
-
-			// And recalculate current transformation to be in respect to the parent joint
-			parentTrans.invert();
-			jointTrans *= parentTrans;
-		}*/
-		
-		///
 		jointOrigins.push_back(currNode->getPos());
+
 		UT_Matrix4 jointTrans = currNode->getLocalTransform();
 
-		if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 13) {
+		/*if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 13) {
 			std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
 
 			UT_Matrix4 temp = currNode->getWorldTransform();
@@ -283,10 +308,13 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 						 std::to_string(temp(2, 2)) + ", " + std::to_string(temp(2, 3)) << std::endl;
 			std::cout << std::to_string(temp(3, 0)) + ", " + std::to_string(temp(3, 1)) + ", " +
 						 std::to_string(temp(3, 2)) + ", " + std::to_string(temp(3, 3)) << std::endl;
-		}
-		///
-		jointTrans.invertKramer();
-		//jointTrans.invert();
+		}*/
+
+		int inv = jointTrans.invert();
+		//if (inv == 1) {
+		//	std::cout << "UH OH" << std::endl;
+		//	std::cout << "Singular matrix at Region" + std::to_string(i) + ": " + std::to_string(inv) << std::endl;
+		//}
 
 		GEO_CaptureBoneStorage boneTrans;
 		boneTrans.myXform *= jointTrans;
@@ -295,12 +323,12 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			GEO_CaptureBoneStorage::tuple_size);
 	}
 
-	for (int i = 0; i < jointOrigins.size(); i++) {
+	/*for (int i = 0; i < jointOrigins.size(); i++) {
 		std::cout << "Joint" + std::to_string(i) + ": " + 
 			std::to_string(jointOrigins.at(i)(0)) + ", " +
 			std::to_string(jointOrigins.at(i)(1)) + ", " +
 			std::to_string(jointOrigins.at(i)(2)) << std::endl;
-	}
+	}*/
 
 	// And now weights
 	const GA_AIFIndexPair* weights = captAttr->getAIFIndexPair();
@@ -319,38 +347,14 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 				closestDist = dist;
 				closestRegion = i;
 			}
-			
-			/*// The point's region index
-			weights->setIndex(captAttr, ptoff, i, i); // entry, region
-
-			// Weight (sum to 1) - TODO change to be 2-3 by distance
-			fpreal weight = 1.0 / numRegions;
-			weights->setData(captAttr, ptoff, i, weight);*/
-			/*if (i == 0) {
-				weights->setData(captAttr, ptoff, i, 1.f);
-			} else {
-				weights->setData(captAttr, ptoff, i, 0.f);
-			}*/
 		}
-
-		/*//bool missedI = true;
-
-		for (int i = 0; i < numRegions; i++) {
-			// The point's region index
-			weights->setIndex(captAttr, ptoff, i, i); // entry, region
-			if (i == closestRegion) {
-				weights->setData(captAttr, ptoff, i, 1.f);
-				//missedI = false;
-			} else {
-				weights->setData(captAttr, ptoff, i, 0.f);
-			}
-		}
-		//if (missedI) {
-		//	std::cout << "MAYDAYMAYDAY MIN JOINT NOT SET" << std::endl;
-		//}*/
 
 		weights->setIndex(captAttr, ptoff, 0, closestRegion); // entry, region
 		weights->setData(captAttr, ptoff, 0, 1.f);
+
+		//if (closestRegion >= 4 && closestRegion <= 12) {
+		//	std::cout << std::to_string(closestRegion) + " " + std::to_string(pt(1)) << std::endl;
+		//}
 	}
 }
 
@@ -424,9 +428,12 @@ GU_AgentDefinitionPtr
 
 	std::cout << "Did rig" << std::endl;
 
+	/// TEMP
+
 	// Create geometry
 	// TODO add user input options
-	GU_Detail* geo = generateGeom(root);
+	//GU_Detail* geo = generateGeom(root);
+	GU_Detail* geo = buildGeo(inOrder);
 	std::cout << "Did geo" << std::endl;
 
 	GU_AgentShapeLibPtr shapeLibrary = createShapeLibrary(path, *rig, geo, inOrder);

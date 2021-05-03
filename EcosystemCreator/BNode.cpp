@@ -222,7 +222,11 @@ UT_Matrix4 BNode::getLocalTransform() {
 
 	UT_Vector3 currDir = position - parent->getPos();
 	//translate.setTranslates(position - parent->getPos());
+	//float l = currDir.length();
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
+	//if (l < 0.999f || l > 1.0001f) {
+	//	std::cout << "YIKES " + std::to_string(l) << std::endl;
+	//}
 
 	UT_Vector3 parentDir;
 	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
