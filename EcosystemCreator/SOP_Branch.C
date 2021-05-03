@@ -2,6 +2,8 @@
 #include "ECOSYSTEMPlugin.h"
 using namespace HDK_Sample;
 
+int HDK_Sample::branchIDnum = 0;
+
 PRM_Template
 SOP_Branch::myTemplateList[] = {
 	// No custom parameters at the post-prototype branch level (as of now)
@@ -54,7 +56,7 @@ SOP_Branch::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
 	: SOP_Node(net, name, op), parentModule(nullptr), childModules(),
-	init_agent(true), change_agent(true)
+	init_agent(true), change_agent(true), branchID(branchIDnum++)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 }
@@ -147,65 +149,14 @@ void SOP_Branch::traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNod
 }
 
 void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
-	/*std::shared_ptr<BNode> parent = currNode->getParent();
-
-	UT_Vector3 start;
-	if (parent) { start = parent->getPos(); }
-	UT_Vector3 end = currNode->getPos();
-
-	// Calculate angle of joint
-	UT_Matrix3 transform = UT_Matrix3(1.0);
-	if (parent) { transform.lookat(end, start, UT_Axis3::ZAXIS); }
-	else {
-		// Or have it flat by default TODO change to using getDir
-		UT_Vector3 look;
-		look(0) = end(0);
-		look(1) = end(1) + 1.0;
-		look(2) = end(2);
-		transform.lookat(end, look, UT_Axis3::ZAXIS);
-	}
-	transform.prerotate<UT_Axis3::XAXIS>(-1.571);
-	// TODO maybe store previous transformation so there's no weird twisting. If there is
-
-	UT_Matrix4 fourD = UT_Matrix4(transform);
-	fourD.setTranslates(end);*/
-	//if (parent) { fourD.setTranslates(end - start); }
-	//else {
-	//	fourD.setTranslates(end);
-
-		/*std::cout << "Root: " + std::to_string(end(0)) + ", " +
-			std::to_string(end(1)) + ", " + std::to_string(end(2)) << std::endl;
-		std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
-
-		std::cout << std::to_string(fourD(0, 0)) + ", " + std::to_string(fourD(0, 1)) + ", " +
-					 std::to_string(fourD(0, 2)) + ", " + std::to_string(fourD(0, 3)) << std::endl;
-		std::cout << std::to_string(fourD(1, 0)) + ", " + std::to_string(fourD(1, 1)) + ", " +
-					 std::to_string(fourD(1, 2)) + ", " + std::to_string(fourD(1, 3)) << std::endl;
-		std::cout << std::to_string(fourD(2, 0)) + ", " + std::to_string(fourD(2, 1)) + ", " +
-					 std::to_string(fourD(2, 2)) + ", " + std::to_string(fourD(2, 3)) << std::endl;
-		std::cout << std::to_string(fourD(3, 0)) + ", " + std::to_string(fourD(3, 1)) + ", " +
-					 std::to_string(fourD(3, 2)) + ", " + std::to_string(fourD(3, 3)) << std::endl;*/
-	//}
-	//fourD.invert();
-
 	// Same effect
-	moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
-	//moduleAgent->setWorldTransform(currNode->getWorldTransform(), currNode->getRigIndex());
+	//moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
+	UT_Matrix4 transform = currNode->getWorldTransform();
+	transform.prescale(currNode->getThickness(), currNode->getThickness(), currNode->getThickness());
+	moduleAgent->setWorldTransform(transform, currNode->getRigIndex());
 
 	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
 		setTransforms(child);
-	}
-}
-
-
-// Doesn't work TODO - delete
-void getPosArray(GU_Agent* moduleA, std::shared_ptr<BNode> currNode, std::vector<UT_Vector3>* posArray) {
-	UT_Matrix4 transf = UT_Matrix4(1.0f);
-	moduleA->computeWorldTransform(transf, currNode->getRigIndex(), false);
-	posArray->push_back(UT_Vector3(transf(0, 3), transf(1, 3), transf(2, 3)));
-
-	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
-		getPosArray(moduleA, child, posArray);
 	}
 }
 
@@ -241,11 +192,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 		if (boss->opStart("Building ECOSYSTEM"))
 		{
 			// Traverse the node structure and make a cylinder for each branch
-			//traverseAndBuild(gdp, root, divisions); // TODO only do for child nodes
-			// Else is a Seed or has no starting structure
+			//traverseAndBuild(gdp, root, divisions); 
 			//if (init_agent) {
 			init_agent = false;
-			std::cout << "Reached1" << std::endl;
 
 			GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
 			//gdp->destroyPrimitives(gdp->getPrimitiveRange());
@@ -268,10 +217,12 @@ SOP_Branch::cookMySop(OP_Context &context)
 			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
 			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
 			gdp->getPrimitiveList().bumpDataId();
-			std::cout << "Reached2" << std::endl;
+
+			// Adding a name
+			GA_RWHandleS name_attr(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE, "name", 1));
+			std::cout << "BRANCH" + std::to_string(branchID) << std::endl;
 
 			moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-			std::cout << "Reached3" << std::endl;
 			//}
 			//if (change_agent) {
 			change_agent = false;
@@ -279,40 +230,25 @@ SOP_Branch::cookMySop(OP_Context &context)
 			std::cout << std::to_string(currIdx) << std::endl;
 			GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
 			moduleAgent->setDefinition(packedPrim, ptrTemp);
-			std::cout << "Reached4" << std::endl;
 
 			GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
 			moduleAgent->setCurrentLayer(packedPrim, currLayer);
-			// TODO - only if age !=0, or? if !init_agent ?? - check why it looks weird
-			//setTransforms(root);
-			std::cout << "Reached5" << std::endl;
+			
+			setTransforms(root);
+
+			// Finishing name
+			UT_WorkBuffer currName;
+			UT_String agentName;
+			currName.sprintf(("agentname_" + std::to_string(branchID)).c_str(), 
+				agentName.buffer(), 0);
+			name_attr.set(packedPrim->getMapOffset(), currName.buffer());
 
 			//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
 			gdp->getPrimitiveList().bumpDataId();
-			//moduleAgent->getRig()->findTransform()
-
-			/*// Looking at stuff
-			//const int n = moduleAgent->intrinsicTransformsArraySize(packedPrim);
-			float dataD[40];
-			float* data = dataD;
-			std::cout << "PRINTING TRANS" << std::endl;
-			moduleAgent->worldTransformsArray(packedPrim, data, 40);
-			for (int aaa = 0; aaa < 40; aaa++) {
-				//std::cout << std::to_string(*(data + aaa)) << std::endl;
-			}
-			*/
-
-			/*std::vector<UT_Vector3> posArray = std::vector<UT_Vector3>();
-			getPosArray(moduleAgent, root, &posArray);
-			std::cout << "PRINTING TRANS" << std::endl;
-			for (int aa = 0; aa < posArray.size(); aa++) {
-				std::cout << "Some Joint: " + std::to_string(posArray.at(aa)(0)) + ", " +
-											  std::to_string(posArray.at(aa)(1)) + ", " + 
-											  std::to_string(posArray.at(aa)(2)) << std::endl;
-			}*/
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
+			std::cout << "Finished Agent cook" << std::endl;
 		}
 
 		// Must tell the interrupt server that we've completed.
@@ -400,11 +336,14 @@ void SOP_Branch::setAge(float changeInAge) {
 		root->setAge(changeInAge, currAgeRange, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
+			std::cout << "Reached1" << std::endl; // DOESNT EVEN GET TO HERE
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
+				std::cout << "Reached2" << std::endl;
 
 				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
+				std::cout << "Reached3" << std::endl;
 
 				// TODO: set lambda and determ properly
 				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
@@ -413,6 +352,7 @@ void SOP_Branch::setAge(float changeInAge) {
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
+				std::cout << "Reached4" << std::endl;
 				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here
@@ -421,7 +361,9 @@ void SOP_Branch::setAge(float changeInAge) {
 				terminalNode->addModuleChild(newModule);
 				childModules.push_back(newModule);
 				//newModules.push_back(newModule);
+				std::cout << "Reached5" << std::endl;
 			}
+			std::cout << "Reached1-out" << std::endl;
 		}
 		else if (decay && !childModules.empty()) {
 			childModules.clear(); // actual destruction is handled in BNode

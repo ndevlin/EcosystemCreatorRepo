@@ -20,6 +20,8 @@
 namespace HDK_Sample {
 class OBJ_Plant;
 
+extern int branchIDnum;
+
 class SOP_Branch : public SOP_Node
 {
 public:
@@ -93,6 +95,8 @@ private:
     /// Any local variables:
     int		myCurrPoint;
     int		myTotalPoints;
+
+	int		branchID;
 
 	bool init_agent;
 	bool change_agent;

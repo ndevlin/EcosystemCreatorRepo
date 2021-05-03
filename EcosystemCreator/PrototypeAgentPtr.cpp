@@ -2,100 +2,8 @@
 
 int PrototypeAgentPtr::protocount = 0;
 
-GU_Detail* PrototypeAgentPtr::generateGeom(std::shared_ptr<BNode> root)
-{
-	GU_Detail* geo = new GU_Detail;
-	// TODO check that this is okay:
-	//geo->clearAndDestroy();
-	//geo->stashAll();
-	traverseAndBuildGeo(geo, root);
-	return geo;
-}
-
-/// Traverse all nodes in this prototype to create cylinder geometry
-void PrototypeAgentPtr::traverseAndBuildGeo(GU_Detail* geo, std::shared_ptr<BNode> currNode,
-	int divisions) {
-	std::shared_ptr<BNode> parent = currNode->getParent();
-
-	UT_Vector3 start;
-	if (parent) { start = parent->getPos(); }
-	UT_Vector3 end = currNode->getPos();
-
-	std::vector<UT_Vector3> startCircle = std::vector<UT_Vector3>();
-	std::vector<UT_Vector3> endCircle = std::vector<UT_Vector3>();
-
-	// Calculate angle of geometry
-	UT_Matrix3 transform = UT_Matrix3(1.0);
-	if (parent) { transform.lookat(end, start); }
-	else {
-		// Or have circles flat by default
-		UT_Vector3 look;
-		look(0) = end(0);
-		look(1) = end(1) + 1.0;
-		look(2) = end(2);
-		transform.lookat(end, look);
-	}
-
-	// TODO move weights here ya
-	// Create angled circle shapes
-	float ang = M_PI * 2 / divisions;
-	for (int i = 0; i < divisions; i++) {
-		// Get point along a circle
-		UT_Vector3 point;
-		point(0) = cos(ang * i);
-		point(1) = sin(ang * i);
-		point(2) = 0.0;
-		// rotate to match the branch
-		point = rowVecMult(point * 0.1f, transform);
-
-		if (parent) { startCircle.push_back(start + point); }
-		endCircle.push_back(end + point);
-	}
-
-	// Load points
-	//std::cout << "traversing" << std::endl;
-	if (parent) {
-		GU_PrimPoly* polyStart = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
-		GU_PrimPoly* polyEnd = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
-
-		for (int j = 0; j < divisions; j++) {
-			GA_Offset ptoffStart = polyStart->getPointOffset(j);
-			geo->setPos3(ptoffStart, startCircle.at(j));
-
-			GA_Offset ptoffEnd = polyEnd->getPointOffset(j);
-			geo->setPos3(ptoffEnd, endCircle.at(j));
-
-			// Set individual rectangle faces
-			GU_PrimPoly* polyRect = GU_PrimPoly::build(geo, 4, GU_POLY_CLOSED);
-
-			for (int k = 0; k < 2; k++) {
-				GA_Offset ptoffRect = polyRect->getPointOffset(k);
-				geo->setPos3(ptoffRect, startCircle.at((j + k) % divisions));
-			}
-
-			for (int k = 0; k < 2; k++) {
-				GA_Offset ptoffRect = polyRect->getPointOffset(k + 2);
-				geo->setPos3(ptoffRect, endCircle.at((j + 1 - k) % divisions));
-			}
-		}
-	}
-	// Otherwise, just draw a circle // TODO only do this if bnode has no children (which shouldnt happen) or time = 0, etc
-	else {
-		//std::cout << "no par" << std::endl;
-		GU_PrimPoly* poly = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
-		for (int j = 0; j < divisions; j++) {
-			GA_Offset ptoff = poly->getPointOffset(j);
-			geo->setPos3(ptoff, endCircle.at(j));
-		}
-	}
-
-	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
-		traverseAndBuildGeo(geo, child, divisions);
-	}
-}
-
-
-GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder, 
+GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder,
+	std::map<int, std::vector<GA_Offset>>& jointOffsets,
 	int divisions) {
 	GU_Detail* geo = new GU_Detail;
 
@@ -130,9 +38,11 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 		for (int j = 0; j < divisions; j++) {
 			GA_Offset ptoffPar = polyParentCircle->getPointOffset(j);
 			geo->setPos3(ptoffPar, parentCircle.at(j));
+			jointOffsets.at(parent->getRigIndex()).push_back(ptoffPar);///
 
 			GA_Offset ptoffCurr = polyCurrCircle->getPointOffset(j);
 			geo->setPos3(ptoffCurr, currCircle.at(j));
+			jointOffsets.at(currNode->getRigIndex()).push_back(ptoffCurr);///
 
 			// Set individual rectangle faces
 			GU_PrimPoly* polyRect = GU_PrimPoly::build(geo, 4, GU_POLY_CLOSED);
@@ -140,11 +50,13 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 			for (int k = 0; k < 2; k++) {
 				GA_Offset ptoffRect = polyRect->getPointOffset(k);
 				geo->setPos3(ptoffRect, parentCircle.at((j + k) % divisions));
+				jointOffsets.at(parent->getRigIndex()).push_back(ptoffRect);///
 			}
 
 			for (int k = 0; k < 2; k++) {
 				GA_Offset ptoffRect = polyRect->getPointOffset(k + 2);
 				geo->setPos3(ptoffRect, currCircle.at((j + 1 - k) % divisions));
+				jointOffsets.at(currNode->getRigIndex()).push_back(ptoffRect);///
 			}
 		}
 	}
@@ -220,13 +132,11 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	}
 
 	for (int i = 2; i < inOrder.size() + 1; i++) { 	// 0 = skin, 1 = root
-	//for (int i = 1; i < inOrder.size(); i++) {
-		//children.append(inOrder.at(i)->getRigIndex());
 		children.append(i);
 	}
 
 	// Iterators
-	std::cout << "Num names: " + std::to_string(names.size()) << std::endl;
+	/*std::cout << "Num names: " + std::to_string(names.size()) << std::endl;
 	int c = 0;
 	UT_Array<UT_StringHolder>::iterator ptr;
 	for (ptr = names.begin(); ptr < names.end(); ptr++) {
@@ -248,7 +158,7 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	for (ptr2 = children.begin(); ptr2 < children.end(); ptr2++) {
 		std::cout << std::to_string(c) + " " + std::to_string(*ptr2) << std::endl;
 		c++;
-	}
+	}*/
 
 	if (!rig->construct(names, child_counts, children)) {
 		std::cout << "Error in rig construction" << std::endl;
@@ -260,7 +170,8 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 
 
 void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig, 
-	const GU_DetailHandle& geomHandle, std::vector<std::shared_ptr<BNode>>& inOrder) {
+	const GU_DetailHandle& geomHandle, std::vector<std::shared_ptr<BNode>>& inOrder,
+	std::map<int, std::vector<GA_Offset>>& jointOffsets) {
 	// Closely following SOP_BouncyAgent here
 	GU_DetailHandleAutoWriteLock gdl(geomHandle);
 	GU_Detail *gdp = gdl.getGdp();
@@ -293,28 +204,9 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
 		jointOrigins.push_back(currNode->getPos());
 
-		UT_Matrix4 jointTrans = currNode->getLocalTransform();
+		UT_Matrix4 jointTrans = currNode->getWorldTransform();
 
-		/*if (currNode->getRigIndex() >= 5 && currNode->getRigIndex() <= 13) {
-			std::cout << std::to_string(currNode->getRigIndex()) << std::endl;
-
-			UT_Matrix4 temp = currNode->getWorldTransform();
-			
-			std::cout << std::to_string(temp(0, 0)) + ", " + std::to_string(temp(0, 1)) + ", " +
-						 std::to_string(temp(0, 2)) + ", " + std::to_string(temp(0, 3)) << std::endl;
-			std::cout << std::to_string(temp(1, 0)) + ", " + std::to_string(temp(1, 1)) + ", " +
-						 std::to_string(temp(1, 2)) + ", " + std::to_string(temp(1, 3)) << std::endl;
-			std::cout << std::to_string(temp(2, 0)) + ", " + std::to_string(temp(2, 1)) + ", " +
-						 std::to_string(temp(2, 2)) + ", " + std::to_string(temp(2, 3)) << std::endl;
-			std::cout << std::to_string(temp(3, 0)) + ", " + std::to_string(temp(3, 1)) + ", " +
-						 std::to_string(temp(3, 2)) + ", " + std::to_string(temp(3, 3)) << std::endl;
-		}*/
-
-		int inv = jointTrans.invert();
-		//if (inv == 1) {
-		//	std::cout << "UH OH" << std::endl;
-		//	std::cout << "Singular matrix at Region" + std::to_string(i) + ": " + std::to_string(inv) << std::endl;
-		//}
+		jointTrans.invert();
 
 		GEO_CaptureBoneStorage boneTrans;
 		boneTrans.myXform *= jointTrans;
@@ -323,19 +215,12 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			GEO_CaptureBoneStorage::tuple_size);
 	}
 
-	/*for (int i = 0; i < jointOrigins.size(); i++) {
-		std::cout << "Joint" + std::to_string(i) + ": " + 
-			std::to_string(jointOrigins.at(i)(0)) + ", " +
-			std::to_string(jointOrigins.at(i)(1)) + ", " +
-			std::to_string(jointOrigins.at(i)(2)) << std::endl;
-	}*/
-
 	// And now weights
 	const GA_AIFIndexPair* weights = captAttr->getAIFIndexPair();
 	weights->setEntries(captAttr, 1);//numRegions);
 
 	// TODO change to nearest joint only (or nearest joint plus parent and children?)
-	for (GA_Offset ptoff : gdp->getPointRange()) {
+	/*for (GA_Offset ptoff : gdp->getPointRange()) {
 		UT_Vector3 pt = gdp->getPos3(ptoff);
 
 		float closestDist = std::numeric_limits<float>::max();
@@ -355,6 +240,16 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		//if (closestRegion >= 4 && closestRegion <= 12) {
 		//	std::cout << std::to_string(closestRegion) + " " + std::to_string(pt(1)) << std::endl;
 		//}
+	}*/
+
+	std::map<int, std::vector<GA_Offset>>::iterator iter;
+	for (iter = jointOffsets.begin(); iter != jointOffsets.end(); ++iter) {
+		int currRegion = iter->first - 1;
+
+		for (GA_Offset ptoff : iter->second) {
+			weights->setIndex(captAttr, ptoff, 0, currRegion); // entry, region
+			weights->setData(captAttr, ptoff, 0, 1.f);
+		}
 	}
 }
 
@@ -363,7 +258,8 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 //#define COLLISION_SKIN_NAME GU_AGENT_LAYER_COLLISION".skin"
 
 GU_AgentShapeLibPtr PrototypeAgentPtr::createShapeLibrary(const char* path, 
-	const GU_AgentRig& rig, GU_Detail* geo, std::vector<std::shared_ptr<BNode>>& inOrder)
+	const GU_AgentRig& rig, GU_Detail* geo, std::vector<std::shared_ptr<BNode>>& inOrder,
+	std::map<int, std::vector<GA_Offset>>& jointOffsets)
 {
 	UT_String libraryName = path;
 	libraryName += "?proto";
@@ -373,7 +269,7 @@ GU_AgentShapeLibPtr PrototypeAgentPtr::createShapeLibrary(const char* path,
 
 	GU_DetailHandle mainGeom;
 	mainGeom.allocateAndSet(geo, true);
-	addWeights(rig, mainGeom, inOrder);
+	addWeights(rig, mainGeom, inOrder, jointOffsets);
 
 	shapeLibrary->addShape(DEFAULT_SKIN_NAME, mainGeom);
 
@@ -428,15 +324,22 @@ GU_AgentDefinitionPtr
 
 	std::cout << "Did rig" << std::endl;
 
-	/// TEMP
+	/// TEMP TEST
+	std::map<int, std::vector<GA_Offset>> offsetsPerJoint = std::map<int, std::vector<GA_Offset>>();
+	for (int i = 0; i < inOrder.size(); i++) {
+		offsetsPerJoint.insert(pair<int, std::vector<GA_Offset>>(
+			inOrder.at(i)->getRigIndex(), std::vector<GA_Offset>()
+		));
+	}
+
 
 	// Create geometry
 	// TODO add user input options
 	//GU_Detail* geo = generateGeom(root);
-	GU_Detail* geo = buildGeo(inOrder);
+	GU_Detail* geo = buildGeo(inOrder, offsetsPerJoint);
 	std::cout << "Did geo" << std::endl;
 
-	GU_AgentShapeLibPtr shapeLibrary = createShapeLibrary(path, *rig, geo, inOrder);
+	GU_AgentShapeLibPtr shapeLibrary = createShapeLibrary(path, *rig, geo, inOrder, offsetsPerJoint);
 	if (!shapeLibrary) {
 		std::cout << "ShapeLibrary is null" << std::endl;
 		return nullptr;

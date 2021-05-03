@@ -219,7 +219,7 @@ std::shared_ptr<BNode> LSystem::process(unsigned int n)
     Turtle turtle;
     std::stack<Turtle> stack;
 	// TODO input origin point, TODO check n or n - 1, thick
-	std::shared_ptr<BNode> rootNode = std::make_shared<BNode>(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), n, 0.0f, 0.1f);
+	std::shared_ptr<BNode> rootNode = std::make_shared<BNode>(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), n, 0.0f, 1.0f);
 	turtle.currSegment = rootNode;
 
     // Init so we're pointing up
