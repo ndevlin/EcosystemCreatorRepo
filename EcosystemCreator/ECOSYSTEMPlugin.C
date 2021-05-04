@@ -211,7 +211,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	std::vector<OP_Node *> scatterNodes;
 
-	int numPlants = 4;
+	int numPlants = 2;
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -261,6 +261,9 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		scatter->connectToInputNode(*mountain, 0, 1);
 
 		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
+
+		scatter->setFloat("npts", 0, 0.f, 100);
+
 
 		scatter->moveToGoodPosition();
 
@@ -315,6 +318,8 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!leafCopyToPoints->runCreateScript())
 		std::cout << "Copy To Points constructor error" << std::endl;
 
+	leafCopyToPoints->moveToGoodPosition();
+
 	// Star will serve as a leaf for now
 	OP_Node* star = newPlant->createNode("star");
 	if (!star)
@@ -339,11 +344,6 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	leafColor->connectToInputNode(*star, 0, 0);
 	leafColor->moveToGoodPosition();
-
-
-	leafCopyToPoints->connectToInputNode(*allTreesMergeNode, 1, 0);
-
-	leafBarkMerge->connectToInputNode(*leafCopyToPoints, 0, 0);
 
 	leafBarkMerge->connectToInputNode(*barkColor, 1, 0);
 
