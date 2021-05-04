@@ -80,8 +80,8 @@ BNode::~BNode() {
 }
 
 std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
-	//std::shared_ptr<BNode> newNode(new BNode(this));
-	std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
+	std::shared_ptr<BNode> newNode(new BNode(this));
+	//std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
 	newNode->setParent(par);
 
 	for (std::shared_ptr<BNode> child : children) {
@@ -114,8 +114,11 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
 	age += changeInAge;
 
+	// For roots of child modules
+	if (parent && isRoot()) { position = parent->getPos(); }
+	
 	// For full branch-segments only, update length and position:
-	if (parent) {
+	else if (parent) {
 		// TODO make this a more smooth curve, slow down over time
 		float branchLength = min(maxLength, age * 0.3f);
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
@@ -137,6 +140,10 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 
 	// Branch thickness update:
 	thickness = max(0.015f, age * baseRadius * 0.3f);
+	// There's an age difference of 1 between terminal nodes and their children
+	// This is how I've decided to deal with it for now
+	if (parent && isRoot()) { thickness = parent->getThickness(); }
+	// TODO maybe only if this is the first of the terminal's childModule array
 
 	// Update children
 	for (std::shared_ptr<BNode> child : children) {
@@ -212,7 +219,7 @@ void BNode::setRigIndex(int idx)
 
 
 UT_Matrix4 BNode::getWorldTransform() {
-	if (!parent) {
+	if (isRoot() || !parent) {
 		return getLocalTransform();
 	}
 	return getLocalTransform() * parent->getWorldTransform();
@@ -220,20 +227,36 @@ UT_Matrix4 BNode::getWorldTransform() {
 
 UT_Matrix4 BNode::getLocalTransform() {
 	UT_Matrix4 translate = UT_Matrix4(1.0f);
+	UT_Vector3 c = UT_Vector3();
+
 	if (!parent) {
-		//translate.prescale(getThickness(), 1.0f, getThickness());
+		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
+			getDir(), c, 1));
 		translate.setTranslates(position);
 		return translate;
 	}
 
+	// Getting the angle of the parent branch segment
+	UT_Vector3 parentDir;
+	if (!parent->isRoot() && parent->getParent()) { 
+		parentDir = parent->getPos() - parent->getParent()->getPos(); 
+	}
+	else if (parent->isRoot() && parent->getParent() && parent->getParent()->getParent()) {
+		// Skipping the terminal node since it's located in the same place as the root node
+		parentDir = parent->getPos() - parent->getParent()->getParent()->getPos();
+	}
+	else { parentDir = parent->getDir(); }
+
+	if (isRoot()) {
+		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
+			parentDir, c, 1));
+		translate.setTranslates(position);
+		return translate;
+	}
+
+	// Getting the angle of the current branch segment
 	UT_Vector3 currDir = position - parent->getPos();
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
-
-	UT_Vector3 parentDir;
-	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
-	else					 { parentDir = parent->getDir(); }
-
-	UT_Vector3 c = UT_Vector3();
 
 	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
 	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
@@ -263,5 +286,6 @@ void BNode::recLengthUpdate(float lengthMultiplier) {
 // experimental #2
 void BNode::recRotate(UT_Matrix3& rotation) {
 	unitDir = rowVecMult(unitDir, rotation);
+	//unitDir = colVecMult(rotation, unitDir);
 	for (std::shared_ptr<BNode> child : children) { child->recRotate(rotation); }
 }
