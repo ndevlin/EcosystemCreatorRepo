@@ -206,11 +206,12 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 
 
-	int numPlants = 1;
 
 	int index = 0;
 
 	std::vector<OP_Node *> scatterNodes;
+
+	int numPlants = 4;
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -258,6 +259,9 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		scatterNodes.push_back(scatter);
 		scatter->connectToInputNode(*mountain, 0, 1);
+
+		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
+
 		scatter->moveToGoodPosition();
 
 		// treeCopyToPoints to create instances of the tree for a forest

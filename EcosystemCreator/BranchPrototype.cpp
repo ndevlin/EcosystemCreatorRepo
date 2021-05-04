@@ -156,19 +156,19 @@ PrototypeSet::PrototypeSet(const char* path)
 	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[&FoFoFoA]////[&FoFoFoA]////&FoFoFoA\no->io", 3, path));
 	
 	// #2
-	/*prototypes.push_back(new BranchPrototype("FoFoAFoC\nA->/[&FoFoC]////[&FoFoC]////[&FoFoC]\nC->FoAFoC\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoAFoC\nA->/[&FoFoC]////[&FoFoC]////[&FoFoC]\nC->FoAFoC\no->io", 3, path));
 
 	// #3
-	prototypes.push_back(new BranchPrototype("///FoAFoFoC\nA->[&FoFoC]//[&FoFoC]//////[&FoFoC]\nC->FoAFoC\no->io", 3));
-	*/
+	prototypes.push_back(new BranchPrototype("///FoAFoFoC\nA->[&FoFoC]//[&FoFoC]//////[&FoFoC]\nC->FoAFoC\no->io", 3, path));
+	
 	// #4
-	//prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #5
-	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #6
-	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3, path));
 
 }
 
@@ -185,7 +185,7 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, fl
 	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
 
 
-	//return prototypes.at(idx)->copyValues();
-	return prototypes.at(0)->copyValues();
+	return prototypes.at(idx)->copyValues();
+	//return prototypes.at(0)->copyValues();
 }
 
