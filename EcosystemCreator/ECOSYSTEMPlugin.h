@@ -75,8 +75,11 @@ private:
 
 	PrototypeSet* prototypeSet;
 
+	/// SINGLE PLANT
+	/// SOP_Branch* rootModule;
 	std::vector<SOP_Branch*> rootModules;
 	int numRootModules;
+	///
 
 	std::vector<OP_Node*> mergers;
 

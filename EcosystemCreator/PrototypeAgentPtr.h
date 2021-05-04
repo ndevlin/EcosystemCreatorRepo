@@ -23,8 +23,8 @@ namespace PrototypeAgentPtr
 {
 	extern int protocount;
 
-	extern GU_Detail* generateGeom(std::shared_ptr<BNode> root);
-	extern void traverseAndBuildGeo(GU_Detail* geo, std::shared_ptr<BNode> currNode,
+	extern GU_Detail* buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder,
+		std::map<int, std::vector<GA_Offset>>& jointOffsets,
 		int divisions = 10);
 
 	extern GU_AgentRigPtr createRig(const char* path, std::shared_ptr<BNode> root,
@@ -32,11 +32,13 @@ namespace PrototypeAgentPtr
 
 	extern void addWeights(const GU_AgentRig& rig, 
 		const GU_DetailHandle& geomHandle, 
-		std::vector<std::shared_ptr<BNode>>& inOrder);
+		std::vector<std::shared_ptr<BNode>>& inOrder,
+		std::map<int, std::vector<GA_Offset>>& jointOffsets);
 
 	extern GU_AgentShapeLibPtr createShapeLibrary(const char* path, 
 		const GU_AgentRig& rig, GU_Detail* geo, 
-		std::vector<std::shared_ptr<BNode>>& inOrder);
+		std::vector<std::shared_ptr<BNode>>& inOrder,
+		std::map<int, std::vector<GA_Offset>>& jointOffsets);
 
 	extern GU_AgentLayerPtr createStartLayer(const char* path, 
 		const GU_AgentRigPtr& rig, const GU_AgentShapeLibPtr &shapeLibrary);

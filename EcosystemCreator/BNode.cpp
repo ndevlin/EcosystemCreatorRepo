@@ -29,24 +29,24 @@ BNode::BNode(BNode* other)
 	: position(other->getPos()), unitDir(other->getDir()), age(other->getAge()), 
 		maxLength(other->getMaxLength()), thickness(other->getBaseRadius()), 
 		baseRadius(other->getBaseRadius()), rigIndex(other->getRigIndex()),
-		parent(nullptr), children(), connectedModules()
+		parent(nullptr), children(), connectedModules(), root(other->isRoot())
 	//: BNode(other->getPos(), other->getDir(), other->getAge(),
 	//	other->getMaxLength(), other->getBaseRadius())
 {
 	//rigIndex = other->getRigIndex();
 }
 
-BNode::BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick)
+BNode::BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick, bool isRootNode)
 	: position(pos), unitDir(dir), age(branchAge), maxLength(length),
-		thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules(), rigIndex(-1)
+		thickness(thick), baseRadius(thick), parent(nullptr), children(), 
+		connectedModules(), rigIndex(-1), root(isRootNode)
 {
 	unitDir.normalize();
 }
 
-BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick)
+BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick, bool isRootNode)
 	: age(branchAge), maxLength(length), thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules(), rigIndex(-1)
+		parent(nullptr), children(), connectedModules(), rigIndex(-1), root(isRootNode)
 {
 	position = UT_Vector3();
 	position(0) = end[0];
@@ -80,7 +80,8 @@ BNode::~BNode() {
 }
 
 std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
-	std::shared_ptr<BNode> newNode(new BNode(this));
+	//std::shared_ptr<BNode> newNode(new BNode(this));
+	std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
 	newNode->setParent(par);
 
 	for (std::shared_ptr<BNode> child : children) {
@@ -114,7 +115,7 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	age += changeInAge;
 
 	// For full branch-segments only, update length and position:
-	if (parent != nullptr) {
+	if (parent) {
 		// TODO make this a more smooth curve, slow down over time
 		float branchLength = min(maxLength, age * 0.3f);
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
@@ -157,6 +158,10 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 }
 
 /// GETTERS
+bool BNode::isRoot() const {
+	return root;
+}
+
 std::shared_ptr<BNode> BNode::getParent() {
 	return parent;
 }
@@ -216,12 +221,12 @@ UT_Matrix4 BNode::getWorldTransform() {
 UT_Matrix4 BNode::getLocalTransform() {
 	UT_Matrix4 translate = UT_Matrix4(1.0f);
 	if (!parent) {
+		//translate.prescale(getThickness(), 1.0f, getThickness());
 		translate.setTranslates(position);
 		return translate;
 	}
 
 	UT_Vector3 currDir = position - parent->getPos();
-	//translate.setTranslates(position - parent->getPos());
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
 
 	UT_Vector3 parentDir;
@@ -232,10 +237,13 @@ UT_Matrix4 BNode::getLocalTransform() {
 
 	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
 	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
+	
+	// The following is safe because thickness doesnt get updated until AFTER 
+	// the agents are created - TODO make a BaseLocalTransform function (using baseRadius)
+	//orientation3.prescale(getThickness(), 1.0f, getThickness());
 
 	UT_Matrix4 transform = UT_Matrix4(orientation3);
 	transform.preMultiply(translate);
-	//transform *= translate;
 
 	return transform;
 }
