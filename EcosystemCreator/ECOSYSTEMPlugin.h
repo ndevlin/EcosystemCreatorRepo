@@ -68,10 +68,10 @@ private:
 
 	PrototypeSet* prototypeSet;
 
-	/// BACK TO SINGLE PLANT
-	SOP_Branch* rootModule;
-	//std::vector<SOP_Branch*> rootModules;
-	//int numRootModules;
+	/// SINGLE PLANT
+	/// SOP_Branch* rootModule;
+	std::vector<SOP_Branch*> rootModules;
+	int numRootModules;
 	///
 
 	OP_Node* merger;
