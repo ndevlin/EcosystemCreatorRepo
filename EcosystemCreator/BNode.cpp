@@ -114,8 +114,11 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
 	age += changeInAge;
 
+	// For roots of child modules
+	if (parent && isRoot()) { position = parent->getPos(); }
+	
 	// For full branch-segments only, update length and position:
-	if (parent) {
+	else if (parent) {
 		// TODO make this a more smooth curve, slow down over time
 		float branchLength = min(maxLength, age * 0.3f);
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
@@ -137,6 +140,10 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 
 	// Branch thickness update:
 	thickness = max(0.015f, age * baseRadius * 0.3f);
+	// There's an age difference of 1 between terminal nodes and their children
+	// This is how I've decided to deal with it for now
+	if (parent && isRoot()) { thickness = parent->getThickness(); }
+	// TODO maybe only if this is the first of the terminal's childModule array
 
 	// Update children
 	for (std::shared_ptr<BNode> child : children) {
@@ -223,24 +230,31 @@ UT_Matrix4 BNode::getLocalTransform() {
 	UT_Vector3 c = UT_Vector3();
 
 	if (!parent) {
-		translate = UT_Matrix4(
-			UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), getDir(), c, 1));
+		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
+			getDir(), c, 1));
 		translate.setTranslates(position);
 		return translate;
 	}
 
+	// Getting the angle of the parent branch segment
 	UT_Vector3 parentDir;
-	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
-	else					 { parentDir = parent->getDir(); }
+	if (!parent->isRoot() && parent->getParent()) { 
+		parentDir = parent->getPos() - parent->getParent()->getPos(); 
+	}
+	else if (parent->isRoot() && parent->getParent() && parent->getParent()->getParent()) {
+		// Skipping the terminal node since it's located in the same place as the root node
+		parentDir = parent->getPos() - parent->getParent()->getParent()->getPos();
+	}
+	else { parentDir = parent->getDir(); }
 
 	if (isRoot()) {
-		//translate = UT_Matrix4(UT_Matrix3::dihedral(parentDir, getDir(), c, 1));
-		translate = UT_Matrix4(UT_Matrix3::dihedral(getDir(), parentDir, c, 1));
-		translate.prescale(1.0f, -1.0f, 1.0f);
+		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
+			parentDir, c, 1));
 		translate.setTranslates(position);
 		return translate;
 	}
 
+	// Getting the angle of the current branch segment
 	UT_Vector3 currDir = position - parent->getPos();
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
 
