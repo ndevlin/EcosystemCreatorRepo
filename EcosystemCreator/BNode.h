@@ -63,7 +63,7 @@ public:
 	void setRigIndex(int idx);
 
 	UT_Matrix4 getWorldTransform();
-	UT_Matrix4 getLocalTransform();
+	//UT_Matrix4 getLocalTransform(); /// No longer in use
 
 	// Recursive adjustments to core variables. Important in setting up child modules
 	void recThicknessUpdate(float radiusMultiplier);

@@ -183,7 +183,7 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 
 	float idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
 
-	return prototypes.at(idx)->copyValues();
-	//return prototypes.at(0)->copyValues();
+	//return prototypes.at(idx)->copyValues();
+	return prototypes.at(0)->copyValues();
 }
 

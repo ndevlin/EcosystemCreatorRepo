@@ -15,6 +15,8 @@
 #include <OP/OP_Operator.h>
 #include <OP/OP_OperatorTable.h>
 
+#include <GU/GU_PrimSphere.h>
+
 #include <limits.h>
 
 namespace HDK_Sample {

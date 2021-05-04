@@ -161,6 +161,17 @@ void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
 	}
 }
 
+void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
+	GU_PrimSphereParms sphere(gdp);
+	sphere.xform.scale(0.15, 0.15, 0.15);
+	sphere.xform.translate(currNode->getPos()(0), currNode->getPos()(1), currNode->getPos()(2));
+	GU_PrimSphere::build(sphere, GEO_PRIMSPHERE);
+
+	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
+		drawSphereAtEachNode(gdp, child);
+	}
+}
+
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
@@ -244,6 +255,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 			//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
 			gdp->getPrimitiveList().bumpDataId();/**/
+
+			// Testing ideal joint locations
+			//drawSphereAtEachNode(gdp, root);
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
