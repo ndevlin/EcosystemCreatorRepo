@@ -325,12 +325,12 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), 
-	prototypeSet(nullptr), numRootModules(0), merger(nullptr)
+	prototypeSet(nullptr), rootModule(nullptr), /*numRootModules(0),*/ merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
-	rootModules = std::vector<SOP_Branch*>();
-	rootModules.push_back(nullptr);
+	//rootModules = std::vector<SOP_Branch*>();
+	//rootModules.push_back(nullptr);
 }
 
 OBJ_Plant::~OBJ_Plant() {}
@@ -362,12 +362,16 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	// for thickness we would only need to rerun the traversal unless time also changes
 	// But this might be more of a prototype-designer sort of thing
 
-	float diff = ageVal - plantAge;
+	/// BACK TO SINGLE PLANT
+	rootModule->setAge(ageVal - plantAge);
+
+	/*float diff = ageVal - plantAge;
 
 	for(int i = 0; i < numRootModules; i++)
 	{ 
-		rootModules[i]->setAge(diff);
-	}
+		else { rootModules.at(i)->setAge(diff); }
+	}*/
+	///
 
 	plantAge = ageVal;
 
@@ -391,7 +395,12 @@ void OBJ_Plant::setPrototypeList() {
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {
-	if (numRootModules < 1)
+	/// BACK TO SINGLE PLANT
+	rootModule = node;
+	rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
+	rootModule->setAge(0.0f);
+
+	/*if (numRootModules < 1)
 	{
 		rootModules[0] = node;
 	}
@@ -401,7 +410,8 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	}
 	node->setPlantAndPrototype(this, 0.0f, 0.0f);
 	node->setAge(0.0f);
-	numRootModules++;
+	numRootModules++;*/
+	///
 }
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {

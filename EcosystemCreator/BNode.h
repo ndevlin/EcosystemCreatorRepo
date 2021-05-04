@@ -13,7 +13,7 @@ namespace HDK_Sample {
 using namespace HDK_Sample;
 
 // These graph nodes surround each branch "segment"
-class BNode : std::enable_shared_from_this<BNode>
+class BNode : public std::enable_shared_from_this<BNode>
 {
 public:
 	static float g1;
@@ -27,8 +27,8 @@ public:
 
 	BNode();
 	BNode(BNode* other);
-	BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick);
-	BNode(vec3 start, vec3 end, float branchAge, float length, float thick);
+	BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick, bool isRootNode = false);
+	BNode(vec3 start, vec3 end, float branchAge, float length, float thick, bool isRootNode = false);
 	~BNode();
 
 	// TODO wow the lack of const correctness. Make things safer
@@ -42,10 +42,13 @@ public:
 	// Adjust all new age-based calculations - Called from module
 	void setAge(float changeInAge, std::pair<float, float>& ageRange,
 		std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay);
+		//std::vector<BNode*>& terminalNodes, bool mature, bool decay);
 
 	// Getters for important variables
 	std::shared_ptr<BNode> getParent();
 	std::vector<std::shared_ptr<BNode>>& getChildren();
+
+	bool isRoot() const;
 
 	UT_Vector3 getPos();
 	UT_Vector3 getDir();
@@ -84,5 +87,7 @@ private:
 	float baseRadius;
 
 	int rigIndex;
+
+	bool root;
 };
 #endif

@@ -56,7 +56,8 @@ SOP_Branch::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
 	: SOP_Node(net, name, op), parentModule(nullptr), childModules(),
-	init_agent(true), change_agent(true), branchID(branchIDnum++)
+	moduleAgent(nullptr), packedPrim(nullptr), init_agent(true), change_agent(true), 
+	branchID(branchIDnum++)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 }
@@ -220,14 +221,12 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 			// Adding a name
 			GA_RWHandleS name_attr(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE, "name", 1));
-			std::cout << "BRANCH" + std::to_string(branchID) << std::endl;
 
 			moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
 			//}
 			//if (change_agent) {
 			change_agent = false;
 			int currIdx = prototype->getIdxAtTimestep(root->getAge());
-			std::cout << std::to_string(currIdx) << std::endl;
 			GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
 			moduleAgent->setDefinition(packedPrim, ptrTemp);
 
@@ -248,7 +247,6 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
-			std::cout << "Finished Agent cook" << std::endl;
 		}
 
 		// Must tell the interrupt server that we've completed.
@@ -328,6 +326,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		}
 
 		// if mature, get terminal nodes to connect to with more modules
+		//std::vector<BNode*> terminalNodes = std::vector<BNode*>();
 		std::vector<std::shared_ptr<BNode>> terminalNodes = std::vector<std::shared_ptr<BNode>>();
 		//std::vector<SOP_Branch*> newModules = std::vector<SOP_Branch*>();
 
@@ -336,14 +335,11 @@ void SOP_Branch::setAge(float changeInAge) {
 		root->setAge(changeInAge, currAgeRange, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
-			std::cout << "Reached1" << std::endl; // DOESNT EVEN GET TO HERE
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
-				std::cout << "Reached2" << std::endl;
 
 				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
-				std::cout << "Reached3" << std::endl;
 
 				// TODO: set lambda and determ properly
 				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
@@ -352,7 +348,6 @@ void SOP_Branch::setAge(float changeInAge) {
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
-				std::cout << "Reached4" << std::endl;
 				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here
@@ -361,9 +356,7 @@ void SOP_Branch::setAge(float changeInAge) {
 				terminalNode->addModuleChild(newModule);
 				childModules.push_back(newModule);
 				//newModules.push_back(newModule);
-				std::cout << "Reached5" << std::endl;
 			}
-			std::cout << "Reached1-out" << std::endl;
 		}
 		else if (decay && !childModules.empty()) {
 			childModules.clear(); // actual destruction is handled in BNode

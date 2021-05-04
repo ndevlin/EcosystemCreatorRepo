@@ -52,9 +52,8 @@ void BranchPrototype::initAgentData(const char* path)
 {
 	for (int i = 0; i < getNumAges(); i++) {
 		// If the user did not provide their own geometry:
-		std::cout << "Reached: " + std::to_string(i) << std::endl;
+		std::cout << "Agent Type: " + std::to_string(i) << std::endl;
 		agentData.push_back(PrototypeAgentPtr::createDefinition(getRootAtIdx(i), path));
-		std::cout << "Reached end" << std::endl;
 	}
 }
 
