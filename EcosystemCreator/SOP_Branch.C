@@ -282,12 +282,18 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 		}
 
 		// Get starting orientation of model based off of parent branch
-		UT_Matrix3 transform = UT_Matrix3(1.0);
+		/*UT_Matrix3 transform = UT_Matrix3(1.0);
 		transform.rotate<UT_Axis3::XAXIS>(1.571);
 
 		UT_Matrix3 transformLook = UT_Matrix3(1.0);
 		transformLook.lookat(UT_Vector3(0.0f, 0.0f, 0.0f), -1.0f * connectingNode->getDir());
-		transform *= transformLook;
+		transform *= transformLook;*/
+		UT_Vector3 c = UT_Vector3();
+		UT_Matrix3 transform = UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
+			connectingNode->getDir(), c, 1);
+		//UT_Matrix3 transform = UT_Matrix3::dihedral(connectingNode->getDir(), 
+		//	UT_Vector3(0.0f, 1.0f, 0.0f), c, 1);
+		//transform.prescale(1.0f, -1.0f, 1.0f);
 		// TODO^ good starting point and will then get replaced by placement optimization
 
 		// Update the values for each prototype age
@@ -301,7 +307,7 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 			prototype->getRootAtIdx(i)->recLengthUpdate(connectingNode->getMaxLength() * 0.8);
 
 			// experimental#2
-			prototype->getRootAtIdx(i)->recRotate(transform);
+			//prototype->getRootAtIdx(i)->recRotate(transform);
 		}
 	}
 }

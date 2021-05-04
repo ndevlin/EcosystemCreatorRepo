@@ -80,8 +80,8 @@ BNode::~BNode() {
 }
 
 std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
-	//std::shared_ptr<BNode> newNode(new BNode(this));
-	std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
+	std::shared_ptr<BNode> newNode(new BNode(this));
+	//std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
 	newNode->setParent(par);
 
 	for (std::shared_ptr<BNode> child : children) {
@@ -212,7 +212,7 @@ void BNode::setRigIndex(int idx)
 
 
 UT_Matrix4 BNode::getWorldTransform() {
-	if (!parent) {
+	if (isRoot() || !parent) {
 		return getLocalTransform();
 	}
 	return getLocalTransform() * parent->getWorldTransform();
@@ -220,20 +220,29 @@ UT_Matrix4 BNode::getWorldTransform() {
 
 UT_Matrix4 BNode::getLocalTransform() {
 	UT_Matrix4 translate = UT_Matrix4(1.0f);
+	UT_Vector3 c = UT_Vector3();
+
 	if (!parent) {
-		//translate.prescale(getThickness(), 1.0f, getThickness());
+		translate = UT_Matrix4(
+			UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), getDir(), c, 1));
+		translate.setTranslates(position);
+		return translate;
+	}
+
+	UT_Vector3 parentDir;
+	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
+	else					 { parentDir = parent->getDir(); }
+
+	if (isRoot()) {
+		//translate = UT_Matrix4(UT_Matrix3::dihedral(parentDir, getDir(), c, 1));
+		translate = UT_Matrix4(UT_Matrix3::dihedral(getDir(), parentDir, c, 1));
+		translate.prescale(1.0f, -1.0f, 1.0f);
 		translate.setTranslates(position);
 		return translate;
 	}
 
 	UT_Vector3 currDir = position - parent->getPos();
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
-
-	UT_Vector3 parentDir;
-	if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
-	else					 { parentDir = parent->getDir(); }
-
-	UT_Vector3 c = UT_Vector3();
 
 	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
 	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
@@ -263,5 +272,6 @@ void BNode::recLengthUpdate(float lengthMultiplier) {
 // experimental #2
 void BNode::recRotate(UT_Matrix3& rotation) {
 	unitDir = rowVecMult(unitDir, rotation);
+	//unitDir = colVecMult(rotation, unitDir);
 	for (std::shared_ptr<BNode> child : children) { child->recRotate(rotation); }
 }
