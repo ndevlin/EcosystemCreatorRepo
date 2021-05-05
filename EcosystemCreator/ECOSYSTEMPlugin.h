@@ -29,6 +29,10 @@ public:
 
 	float                     getAge();
 
+	void initPlantType(/* TODO add parameters*/);
+
+	std::vector<std::shared_ptr<PlantType>> plantTypes;
+
 protected:
 
 	OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op);
@@ -49,9 +53,10 @@ protected:
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
 				 { return evalVariableValue(v, i, thread); }*/
 
-	void setPrototypeList();
+	//void setPrototypeList();
 	void setRootModule(SOP_Branch* node);
 	void setMerger(OP_Node* mergeNode);
+	SOP_Plant* createPlant(/*add position maybe*/);
 
 private:
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook

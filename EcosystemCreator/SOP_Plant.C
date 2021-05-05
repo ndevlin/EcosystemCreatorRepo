@@ -4,6 +4,7 @@ using namespace HDK_Sample;
 
 bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 {
+	// TODO change to just SOP operators maybe
 	return true;//(dynamic_cast<sop_CustomVopOperator *>(op) != NULL);
 }
 
@@ -81,8 +82,6 @@ OP_Node *
 SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	SOP_Plant* newPlant = new SOP_Plant(net, name, op);
-	// TODO take as an input and share across plant instances
-	newPlant->setPrototypeList();
 
 	//// Create a merge node to merge all sop output geom
 	OP_Node* mergeNode = newPlant->createNode("merge");
@@ -91,26 +90,36 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	// Create the root branch module
-	OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
-
-	if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
-	else if (!branchNode_OP->runCreateScript())
-		std::cout << "Root module constructor error" << std::endl;
-
-	std::cout << "Made branch and merge nodes" << std::endl;
-
-	if (branchNode_OP && mergeNode) {
-		SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
-		newPlant->setRootModule(branchNode);
-		newPlant->setMerger(mergeNode);
-		newPlant->addToMerger(branchNode);
-		//mergeNode->connectToInputNode(*node, 0);
-
-		branchNode_OP->moveToGoodPosition();
+	if (mergeNode) { 
+		newPlant->setMerger(mergeNode); 
 		mergeNode->moveToGoodPosition();
 	}
+
+	//// Create the root branch module
+	//OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
+	//
+	//if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
+	//else if (!branchNode_OP->runCreateScript())
+	//	std::cout << "Root module constructor error" << std::endl;
+	//
+	//std::cout << "Made branch and merge nodes" << std::endl;
+	//
+	//if (branchNode_OP && mergeNode) {
+	//	SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
+	//	newPlant->setRootModule(branchNode);
+	//	//newPlant->setMerger(mergeNode);
+	//	newPlant->addToMerger(branchNode);
+	//	//mergeNode->connectToInputNode(*node, 0);
+	//
+	//	branchNode_OP->moveToGoodPosition();
+	//	//mergeNode->moveToGoodPosition();
+	//}
 	newPlant->moveToGoodPosition();
+
+	newPlant->myOutputNodes.append(mergeNode);
+	newPlant->getOutputSop(0, true);
+	//newPlant->output
+	newPlant->setOutputForView(0);
 	//
 	//// Color for bark
 	//OP_Node* color1 = newPlant->createNode("color");
@@ -265,21 +274,12 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: SOP_Node(net, name, op),
-	prototypeSet(nullptr), rootModule(nullptr), merger(nullptr)
+	: SOP_Node(net, name, op), plantType(nullptr), ecosystem(nullptr),
+	rootModule(nullptr), merger(nullptr)
 {
 	createAndGetOperatorTable();
-	//addChildManager(SOP_OPTYPE_ID);
-	//std::cout << std::to_string(isNetwork()) + " " + std::to_string(isSubNetwork(true)) << std::endl;
 	myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
-	//setOperatorTable(getOperatorTable("SOP"));
-	/*UT_String path;
-	getFullPath(path);
-	//buildOperatorTable(*getOperatorTable("SOP", path));
-	if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
-		std::cout << " ITS A TABLE" << std::endl;
-	}*/
 	///setAllowBuildDependencies
 }
 
@@ -321,38 +321,16 @@ SOP_Plant::cookMySop(OP_Context &context)
 	// But this might be more of a prototype-designer sort of thing
     
     // For ecosystem
-    //if (plant && !parentModule) {
-	//	addExtraInput(plant, OP_INTEREST_DATA);
-	//}
-	//if (rootModule) {
-	//	rootModule->setAge(ageVal - plantAge);
-	//}
-	//else {
-	//	std::cout << "NO ROOT" << std::endl;
-	//	return error();
-	//}
+	if (ecosystem) {
+		std::cout << "ECO Adding interest" << std::endl;
+		addExtraInput(ecosystem, OP_INTEREST_DATA);
+	}
 
-    //UT_Interrupt *boss;
-    //if (error() < UT_ERROR_ABORT)
-    //{
-	//	boss = UTgetInterrupt();
-	//
-    //    if (boss->opStart("Building PLANT"))
-	//	{
-	        /// SINGLE PLANT
-	//      rootModule->setAge(ageVal - plantAge);
-    //    }
-	//
-    //    // Must tell the interrupt server that we've completed.
-	//	boss->opEnd();
-    //}
-	//triggerOutputChanged();
+	if (rootModule) {
+		rootModule->setAge(ageVal - plantAge);
+	}
 
 	plantAge = ageVal;
-
-	// Run geometry cook, needed to process primitive inputs
-	//OP_ERROR    errorstatus;
-	//errorstatus = OBJ_Geometry::cookMyObj(context);
 
     myCurrPoint = -1;
 	std::cout << "PLANT COOK END" << std::endl;
@@ -360,14 +338,10 @@ SOP_Plant::cookMySop(OP_Context &context)
 }
 
 /// SETTERS
-void SOP_Plant::setPrototypeList() {
+/*void SOP_Plant::setPrototypeList() {
 	// TODO don't create one here. Take as an input and share across plant instances
-	// Dont allow plant loading without that
-	// Decide on a path
-	UT_String path;
-	getFullPath(path);
-	prototypeSet = new PrototypeSet(path);
-}
+	ecosystem->setPrototypeList(); 
+}*/
 
 void SOP_Plant::setRootModule(SOP_Branch* node) {
 	/// SINGLE PLANT
@@ -380,12 +354,43 @@ void SOP_Plant::setMerger(OP_Node* mergeNode) {
 	merger = mergeNode;
 }
 
+void SOP_Plant::initPlant(OBJ_Plant * eco)
+{
+	ecosystem = eco;
+	// TODO choose plantType based on climate OR through direct input from seeding
+	//setPrototypeList();
+	if (!ecosystem->plantTypes.empty()) {
+		plantType = ecosystem->plantTypes.at(0);
+
+		if (merger) {
+			// Create the root branch module
+			OP_Node* branchNode_OP = createNode("BranchModule");
+
+			if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
+			else if (!branchNode_OP->runCreateScript())
+				std::cout << "Root module constructor error" << std::endl;
+
+			std::cout << "Made branch and merge nodes" << std::endl;
+
+			if (branchNode_OP) {
+				SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
+				setRootModule(branchNode);
+				addToMerger(branchNode);
+				branchNode_OP->moveToGoodPosition();
+			}
+		}
+	}
+	else {
+		std::cout << "NO PLANT TYPES ARE DEFINED" << std::endl;
+	}
+}
+
 float SOP_Plant::getAge() {
 	return plantAge;
 }
 
 /// Functions related to making this a network
-int HDK_Sample::SOP_Plant::isNetwork() const
+int SOP_Plant::isNetwork() const
 {
 	return 1;
 }
@@ -430,6 +435,7 @@ void SOP_Plant::addToMerger(SOP_Branch* bMod) {
 
 // Generate a prototype copy for editing in branch node
 BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
-	return prototypeSet->selectNewPrototype(lambda, determ);
+	//return ecosystem->copyPrototypeFromList(lambda, determ);
+	return plantType->copyPrototypeFromList(lambda, determ);
 }
 

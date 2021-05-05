@@ -148,13 +148,14 @@ OP_Node *
 OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	OBJ_Plant* newEco = new OBJ_Plant(net, name, op);
-	// TODO take as an input and share across plant instances
+	
+	// Initialize however many plant types you want, right now the constructor is the same for each
+	// TODO diversify
+	newEco->initPlantType(/* TODO add parameters*/);
 
-	OP_Node* node = newEco->createNode("PlantNode");
-	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
-	else if (!node->runCreateScript())
-		std::cout << "Plant node constructor error" << std::endl;
-	node->moveToGoodPosition();
+	// Initialize plant from current ecosystem parameters
+	// TODO maybe select PlantType here
+	newEco->createPlant(/*add position maybe*/);
 
 	/*newPlant->setPrototypeList();
 
@@ -343,7 +344,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: OBJ_Geometry(net, name, op), 
+	: OBJ_Geometry(net, name, op), plantTypes(),
 	prototypeSet(nullptr), /*rootModule(nullptr), numRootModules(0),*/ merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
@@ -364,6 +365,7 @@ OBJ_Plant::disableParms()
 OP_ERROR
 OBJ_Plant::cookMyObj(OP_Context &context)
 {
+	std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
 
 	// Get current plant-related values
@@ -400,17 +402,16 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	errorstatus = OBJ_Geometry::cookMyObj(context);
 
     myCurrPoint = -1;
+	std::cout << "ECO COOK END" << std::endl;
 	return errorstatus;
 }
 
 /// SETTERS
-void OBJ_Plant::setPrototypeList() {
-	// TODO don't create one here. Take as an input and share across plant instances
-	// Dont allow plant loading without that
+void OBJ_Plant::initPlantType(/* TODO add parameters*/) {
 	// Decide on a path
 	UT_String path;
 	getFullPath(path);
-	prototypeSet = new PrototypeSet(path);
+	plantTypes.push_back(std::make_shared<PlantType>(path));
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {
@@ -435,6 +436,21 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {
 	merger = mergeNode;
+}
+
+SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
+	OP_Node* node = createNode("PlantNode");
+	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
+	else if (!node->runCreateScript())
+		std::cout << "Plant node constructor error" << std::endl;
+	node->moveToGoodPosition();
+
+	SOP_Plant* newPlant = (SOP_Plant*)node;
+	// It is currently selecting a PlantType randomly in here.
+	// TODO input PlantType based on seeding
+	newPlant->initPlant(this);
+
+	return newPlant;
 }
 
 float OBJ_Plant::getAge() {

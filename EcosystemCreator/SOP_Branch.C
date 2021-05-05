@@ -175,6 +175,7 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
+	std::cout << "BRANCH COOK START" << std::endl;
 	fpreal now = context.getTime();
 
 	// Cylinder variables
@@ -186,6 +187,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 	// If the root node
 	// Explicitly state dependency on plant, so that this is dirtied every time plant updates
 	if (plant && !parentModule) {
+		//UT_DMatrix4 xform(1.0);
+		//plant->getWorldTransform(xform, context);
+		std::cout << "Adding interest" << std::endl;
 		addExtraInput(plant, OP_INTEREST_DATA);
 	}
 	// Else state dependency on parent branch module
@@ -269,6 +273,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 	triggerOutputChanged();
 
     myCurrPoint = -1;
+	std::cout << "BRANCH COOK END" << std::endl;
     return error();
 }
 
@@ -328,6 +333,7 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 
 /// Important: updates all time-based values in all modules. Does all main calculations
 void SOP_Branch::setAge(float changeInAge) {
+	std::cout << "reached age" << std::endl;
 	if (prototype) {
 		float ageVal = changeInAge + root->getAge();
 		bool mature = false;
@@ -368,7 +374,7 @@ void SOP_Branch::setAge(float changeInAge) {
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
-				//newModule->moveToGoodPosition();
+				newModule->moveToGoodPosition();
 				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here

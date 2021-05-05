@@ -3,8 +3,10 @@
 
 #include <SOP/SOP_Node.h>
 #include <SOP_Branch.h>
+#include "PlantType.h"
 
 namespace HDK_Sample {
+class OBJ_Plant;
 
 class SOP_CustomSopOperatorFilter : public OP_OperatorFilter
 {
@@ -46,6 +48,8 @@ public:
 
 	static const char*        theChildTableName;
 
+	//void setEcosystem(OBJ_Plant* eco);
+	void initPlant(OBJ_Plant* eco);
 	//virtual OP_ERROR		  cookMe(OP_Context &context);
 
 protected:
@@ -71,7 +75,7 @@ protected:
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
 				 { return evalVariableValue(v, i, thread); }*/
 
-	void setPrototypeList();
+	//void setPrototypeList();
 	void setRootModule(SOP_Branch* node);
 	void setMerger(OP_Node* mergeNode);
 
@@ -91,7 +95,9 @@ private:
 
 	float plantAge;
 
-	PrototypeSet* prototypeSet;
+	std::shared_ptr<PlantType> plantType;
+	OBJ_Plant* ecosystem;
+	//PrototypeSet* prototypeSet;
 
 	/// SINGLE PLANT
 	SOP_Branch* rootModule;

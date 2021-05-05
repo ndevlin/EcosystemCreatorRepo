@@ -42,6 +42,9 @@
     <ClCompile Include="SOP_Plant.C">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PlantType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matrix.h">
@@ -69,6 +72,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SOP_Plant.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlantType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
