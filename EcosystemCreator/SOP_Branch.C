@@ -280,6 +280,8 @@ void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, 
 	currAgeRange = prototype->getRangeAtIdx(0);
 
 	root = prototype->getRootAtIdx(0);
+
+	rootIndex = rootIndexIn;
 }
 
 /// While setting the parent module, also alters current node data based on last branch

@@ -211,7 +211,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	std::vector<OP_Node *> scatterNodes;
 
-	int numPlants = 10;
+	int numPlants = 4;
 
 	for (int i = 0; i < numPlants; i++)
 	{
