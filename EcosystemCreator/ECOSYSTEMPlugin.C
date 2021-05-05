@@ -211,7 +211,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	std::vector<OP_Node *> scatterNodes;
 
-	int numPlants = 2;
+	int numPlants = 10;
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -262,7 +262,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
 
-		scatter->setFloat("npts", 0, 0.f, 100);
+		scatter->setFloat("npts", 0, 0.f, 1);
 
 
 		scatter->moveToGoodPosition();

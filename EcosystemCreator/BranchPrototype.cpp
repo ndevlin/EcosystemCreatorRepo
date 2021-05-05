@@ -182,8 +182,9 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, fl
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 
-	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
+	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX) - 0.00001) + lowerBound) * prototypes.size());
 
+	std::cout << "In selectNewPrototype() " << std::endl;
 
 	return prototypes.at(idx)->copyValues();
 	//return prototypes.at(0)->copyValues();
