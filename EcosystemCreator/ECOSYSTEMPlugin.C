@@ -150,21 +150,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	OBJ_Plant* newEco = new OBJ_Plant(net, name, op);
 	// TODO take as an input and share across plant instances
 
-	//OP_Node* node = newEco->createNode("PlantNode");
-	//if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
-	//else if (!node->runCreateScript())
-	//	std::cout << "Plant node constructor error" << std::endl;
-	//node->moveToGoodPosition();
-
-	OP_Node* childNet = newEco->createNode("sopnet");
-	if (!childNet) { std::cout << "Network is Nullptr" << std::endl; }
-	else if (!childNet->runCreateScript())
-		std::cout << "Network constructor error" << std::endl;
-
-	OP_Network* childNet_SOP = (OP_Network*)childNet;
-	std::cout << "Made network" << std::endl;
-
-	OP_Node* node = childNet_SOP->createNode("PlantNode");
+	OP_Node* node = newEco->createNode("PlantNode");
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
 		std::cout << "Plant node constructor error" << std::endl;

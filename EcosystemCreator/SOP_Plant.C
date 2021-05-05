@@ -2,6 +2,12 @@
 #include "ECOSYSTEMPlugin.h"
 using namespace HDK_Sample;
 
+bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
+{
+	return true;//(dynamic_cast<sop_CustomVopOperator *>(op) != NULL);
+}
+
+
 // Declaring parameters here
 static PRM_Name	plantAgeName("plantAge", "PlantAge");
 static PRM_Name	      g1Name("g1",       "TropismDecrease");
@@ -43,6 +49,8 @@ SOP_Plant::myVariables[] = {
     { 0, 0, 0 },
 };
 
+const char *SOP_Plant::theChildTableName = SOP_TABLE_NAME;
+
 /// Still unsure if we'll need this
 /*bool
 SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
@@ -77,14 +85,14 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	newPlant->setPrototypeList();
 
 	//// Create a merge node to merge all sop output geom
-	OP_Node* mergeNode = net->createNode("merge");//newPlant->createNode("merge");
+	OP_Node* mergeNode = newPlant->createNode("merge");
 
 	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
 	// Create the root branch module
-	OP_Node* branchNode_OP = net->createNode("BranchModule");// newPlant->createNode("BranchModule"); // "node"
+	OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
 
 	if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
 	else if (!branchNode_OP->runCreateScript())
@@ -260,6 +268,7 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: SOP_Node(net, name, op),
 	prototypeSet(nullptr), rootModule(nullptr), merger(nullptr)
 {
+	createAndGetOperatorTable();
 	//addChildManager(SOP_OPTYPE_ID);
 	//std::cout << std::to_string(isNetwork()) + " " + std::to_string(isSubNetwork(true)) << std::endl;
 	myCurrPoint = -1;	// To prevent garbage values from being returned
@@ -267,11 +276,11 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	//setOperatorTable(getOperatorTable("SOP"));
 	/*UT_String path;
 	getFullPath(path);
-	buildOperatorTable(*getOperatorTable("SOP", path));
-	//if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
-	//	std::cout << " ITS A TABLE" << std::endl;
-	//}
-	///setAllowBuildDependencies*/
+	//buildOperatorTable(*getOperatorTable("SOP", path));
+	if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
+		std::cout << " ITS A TABLE" << std::endl;
+	}*/
+	///setAllowBuildDependencies
 }
 
 SOP_Plant::~SOP_Plant() {}
@@ -282,6 +291,13 @@ SOP_Plant::disableParms()
 {
     return 0;
 }*/
+
+/*OP_ERROR
+SOP_Plant::cookMe(OP_Context &context)
+{
+	return error();
+}*/
+
 
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
@@ -308,13 +324,13 @@ SOP_Plant::cookMySop(OP_Context &context)
     //if (plant && !parentModule) {
 	//	addExtraInput(plant, OP_INTEREST_DATA);
 	//}
-	if (rootModule) {
-		rootModule->setAge(ageVal - plantAge);
-	}
-	else {
-		std::cout << "NO ROOT" << std::endl;
-		return error();
-	}
+	//if (rootModule) {
+	//	rootModule->setAge(ageVal - plantAge);
+	//}
+	//else {
+	//	std::cout << "NO ROOT" << std::endl;
+	//	return error();
+	//}
 
     //UT_Interrupt *boss;
     //if (error() < UT_ERROR_ABORT)
@@ -368,10 +384,42 @@ float SOP_Plant::getAge() {
 	return plantAge;
 }
 
+/// Functions related to making this a network
 int HDK_Sample::SOP_Plant::isNetwork() const
 {
 	return 1;
 }
+
+const char *
+SOP_Plant::getChildType() const
+{
+    return SOP_OPTYPE_NAME;
+}
+
+OP_OpTypeId
+SOP_Plant::getChildTypeID() const
+{
+    return SOP_OPTYPE_ID;
+}
+
+OP_OperatorTable *
+SOP_Plant::createAndGetOperatorTable()
+{
+    // We chain our custom VOP operators onto the default VOP operator table.
+    OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
+
+    // Procedurally create some simple operator types for illustrative purposes.
+    //table.addOperator(new sop_CustomVopOperator("hdk_inout11_", "In-Out 1-1"));
+    //table.addOperator(new sop_CustomVopOperator("hdk_inout21_", "In-Out 2-1"));
+    //table.addOperator(new sop_CustomVopOperator("hdk_inout12_", "In-Out 1-2"));
+    //table.addOperator(new sop_CustomVopOperator("hdk_inout22_", "In-Out 2-2"));
+
+    // Notify observers of the operator table that it has been changed.
+    table.notifyUpdateTableSinksOfUpdate();
+
+    return &table;
+}
+///
 
 void SOP_Plant::addToMerger(SOP_Branch* bMod) {
 	// Get unique input path

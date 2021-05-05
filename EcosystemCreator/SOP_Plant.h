@@ -5,6 +5,13 @@
 #include <SOP_Branch.h>
 
 namespace HDK_Sample {
+
+class SOP_CustomSopOperatorFilter : public OP_OperatorFilter
+{
+public:
+    bool allowOperatorAsChild(OP_Operator *op) override;
+};
+
 class SOP_Plant : public SOP_Node
 {
 public:
@@ -28,6 +35,19 @@ public:
 
 	int						  isNetwork() const override;
 
+	/// We override these to specify that our child network type is VOPs.
+    const char*               getChildType() const override;
+    OP_OpTypeId               getChildTypeID() const override;
+
+	/// Override this to provide custom behaviour for what is allowed in the
+    /// tab menu.
+    OP_OperatorFilter*        getOperatorFilter() override
+                                    { return &myOperatorFilter; }
+
+	static const char*        theChildTableName;
+
+	//virtual OP_ERROR		  cookMe(OP_Context &context);
+
 protected:
 
 	SOP_Plant(OP_Network *net, const char *name, OP_Operator *op);
@@ -39,6 +59,9 @@ protected:
 
     /// Do the actual Branch SOP computing
     virtual OP_ERROR		 cookMySop(OP_Context &context);
+
+	/// Inspired by custom vop example
+	OP_OperatorTable *       createAndGetOperatorTable();
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
@@ -53,6 +76,8 @@ protected:
 	void setMerger(OP_Node* mergeNode);
 
 private:
+	SOP_CustomSopOperatorFilter myOperatorFilter;
+
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
 	float AGE(fpreal t)     { return evalFloat("plantAge", 0, t); }
 	float G1(fpreal t)      { return evalFloat("g1",       0, t); }
