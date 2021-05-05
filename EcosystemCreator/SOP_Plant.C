@@ -76,45 +76,33 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	// TODO take as an input and share across plant instances
 	newPlant->setPrototypeList();
 
-	OP_Node* childNet = net->createNode("sopnet");
-	if (!childNet) { std::cout << "Network is Nullptr" << std::endl; }
-	else if (!childNet->runCreateScript())
-		std::cout << "Network constructor error" << std::endl;
-	std::cout << "Made network0" << std::endl;
+	//// Create a merge node to merge all sop output geom
+	OP_Node* mergeNode = net->createNode("merge");//newPlant->createNode("merge");
 
-	OP_Network* childNet_SOP = (OP_Network*)childNet;
-	std::cout << "Made network" << std::endl;
+	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!mergeNode->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
 
-	if (childNet_SOP) {
-		childNet_SOP->connectToInputNode(*newPlant, 0, 0);
-		std::cout << "Connected network" << std::endl;
+	// Create the root branch module
+	OP_Node* branchNode_OP = net->createNode("BranchModule");// newPlant->createNode("BranchModule"); // "node"
 
-		//// Create a merge node to merge all sop output geom
-		OP_Node* mergeNode = childNet_SOP->createNode("merge");
+	if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
+	else if (!branchNode_OP->runCreateScript())
+		std::cout << "Root module constructor error" << std::endl;
 
-		if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-		else if (!mergeNode->runCreateScript())
-			std::cout << "Merge constructor error" << std::endl;
+	std::cout << "Made branch and merge nodes" << std::endl;
 
-		// Create the root branch module
-		OP_Node* branchNode_OP = childNet_SOP->createNode("BranchModule"); // "node"
+	if (branchNode_OP && mergeNode) {
+		SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
+		newPlant->setRootModule(branchNode);
+		newPlant->setMerger(mergeNode);
+		newPlant->addToMerger(branchNode);
+		//mergeNode->connectToInputNode(*node, 0);
 
-		if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
-		else if (!branchNode_OP->runCreateScript())
-			std::cout << "Root module constructor error" << std::endl;
-
-		if (branchNode_OP && mergeNode) {
-			SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
-			newPlant->setRootModule(branchNode);
-			newPlant->setMerger(mergeNode);
-			newPlant->addToMerger(branchNode);
-			//mergeNode->connectToInputNode(*node, 0);
-
-			branchNode_OP->moveToGoodPosition();
-			mergeNode->moveToGoodPosition();
-		}
-		childNet_SOP->moveToGoodPosition();
+		branchNode_OP->moveToGoodPosition();
+		mergeNode->moveToGoodPosition();
 	}
+	newPlant->moveToGoodPosition();
 	//
 	//// Color for bark
 	//OP_Node* color1 = newPlant->createNode("color");
@@ -320,13 +308,13 @@ SOP_Plant::cookMySop(OP_Context &context)
     //if (plant && !parentModule) {
 	//	addExtraInput(plant, OP_INTEREST_DATA);
 	//}
-	//if (rootModule) {
-	//	rootModule->setAge(ageVal - plantAge);
-	//}
-	//else {
-	//	std::cout << "NO ROOT" << std::endl;
-	//	return error();
-	//}
+	if (rootModule) {
+		rootModule->setAge(ageVal - plantAge);
+	}
+	else {
+		std::cout << "NO ROOT" << std::endl;
+		return error();
+	}
 
     //UT_Interrupt *boss;
     //if (error() < UT_ERROR_ABORT)
