@@ -42,7 +42,6 @@ public:
 	/// Static helper to compare float to range
 	static bool isInRange(std::pair<float, float>& range, float time);
 
-
 	static void setRandomness(float randIn);
 
 

@@ -210,9 +210,6 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!groundColor->runCreateScript())
 		std::cout << "Color constructor error" << std::endl;
 
-
-
-
 	int index = 0;
 
 	std::vector<OP_Node *> scatterNodes;

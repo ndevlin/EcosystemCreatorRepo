@@ -172,10 +172,10 @@ PrototypeSet::PrototypeSet(const char* path)
 	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #5
-	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
+	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #6
-	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3, path));
+	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3, path));
 
 }
 
@@ -190,22 +190,24 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, fl
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 
-	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX) - 0.00001) + lowerBound) * prototypes.size());
+	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
 	*/
+
+	float idx = (((rainfall + temperature) / 2.f)) * prototypes.size();
+
+	float randAdjust = randomness * (1.f / lambda) * (((float)rand() * 2.f / RAND_MAX) - 1.f);
+
+	int idxInt = int(idx + randAdjust);
+
+	idxInt = std::max(idxInt, 0);
+	idxInt = std::min(idxInt, int(prototypes.size() - 1));
+
+	std::cout << "idxInt: " << idxInt << std::endl;
+
 	
-	int idx = int((((rainfall + temperature) / 2.f) - 0.00001f) * prototypes.size());
+	//int idx = int((((rainfall + temperature) / 2.f) - 0.00001f) * prototypes.size());
 
-	std::cout << "In selectNewPrototype() " << std::endl;
-
-	std::cout << "idx: " << idx << std::endl;
-
-	std::cout << "rainfall: " << rainfall << std::endl;
-
-	std::cout << "temperature: " << temperature << std::endl;
-
-
-
-	return prototypes.at(idx)->copyValues();
+	return prototypes.at(idxInt)->copyValues();
 	//return prototypes.at(0)->copyValues();
 }
 
