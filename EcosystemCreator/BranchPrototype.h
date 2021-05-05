@@ -5,6 +5,8 @@
 
 ///// INDIVIDUAL PROTOTYPES /////
 
+extern float randomness;
+
 class BranchPrototype
 {
 public:
@@ -39,6 +41,10 @@ public:
 
 	/// Static helper to compare float to range
 	static bool isInRange(std::pair<float, float>& range, float time);
+
+
+	static void setRandomness(float randIn);
+
 
 private:
 	typedef std::pair<std::pair<float, float>, std::shared_ptr<BNode>> AgeGraph;

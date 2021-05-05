@@ -2,6 +2,8 @@
 
 ///// INDIVIDUAL PROTOTYPES /////
 
+float randomness = 0.5;
+
 /// Constructors
 // TODO, for other constructors, make sure to sort the time ranges
 BranchPrototype::BranchPrototype(const char* path)
@@ -46,6 +48,11 @@ BranchPrototype::BranchPrototype(BranchPrototype* other)
 BranchPrototype* BranchPrototype::copyValues()
 {
 	return new BranchPrototype(this);
+}
+
+void BranchPrototype::setRandomness(float randIn)
+{
+	randomness = randIn;
 }
 
 void BranchPrototype::initAgentData(const char* path)

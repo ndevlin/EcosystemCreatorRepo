@@ -46,6 +46,8 @@ static PRM_Name	      g1Name("g1",       "TropismDecrease");
 static PRM_Name	      g2Name("g2",       "TropismStrength");
 static PRM_Name rainfallName("rainfall", "Rainfall");
 static PRM_Name temperatureName("temperature", "Temperature");
+static PRM_Name randomnessName("randomness", "Randomness");
+
 
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
@@ -56,6 +58,7 @@ static PRM_Default	     g1Default(1.0);
 static PRM_Default	     g2Default(-0.2);
 static PRM_Default rainfallDefault(0.0);
 static PRM_Default temperatureDefault(0.0);
+static PRM_Default randomnessDefault(0.5);
 
 
 // Set up the ranges for the parameter inputs here
@@ -64,6 +67,7 @@ static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 static PRM_Range rainfallRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
 static PRM_Range temperatureRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
+static PRM_Range randomnessRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
 
 
 
@@ -77,6 +81,8 @@ OBJ_Plant::myTemplateList[] = {
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &rainfallName, &rainfallDefault, 0, &rainfallRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &temperatureName, &temperatureDefault, 0, &temperatureRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &randomnessName, &randomnessDefault, 0, &randomnessRange),
+
 	PRM_Template()
 };
 
@@ -394,12 +400,14 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	float g2Val;
 	float rainfall;
 	float temperature;
+	float randomness;
 
 	ageVal = AGE(now);
 	g1Val  = G1(now);
 	g2Val  = G2(now);
 	rainfall = RAINFALL(now);
 	temperature = TEMPERATURE(now);
+	randomness = RANDOMNESS(now);
 
 	BNode::updateG1(g1Val);
 	BNode::updateG2(g2Val);
@@ -412,6 +420,7 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	///
 	float diff = ageVal - plantAge;
 
+	BranchPrototype::setRandomness(randomness);
 
 	for(int i = 0; i < numRootModules; i++)
 	{ 
