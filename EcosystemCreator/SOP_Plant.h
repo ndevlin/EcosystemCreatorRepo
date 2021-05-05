@@ -1,12 +1,11 @@
-#ifndef __ECOSYSTEM_PLUGIN_h__
-#define __ECOSYSTEM_PLUGIN_h__
+#ifndef __SOP_PLANT_h__
+#define __SOP_PLANT_h__
 
-#include <OBJ/OBJ_Geometry.h>
+#include <SOP/SOP_Node.h>
 #include <SOP_Branch.h>
-#include <SOP_Plant.h>
 
 namespace HDK_Sample {
-class OBJ_Plant : public OBJ_Geometry
+class SOP_Plant : public SOP_Node
 {
 public:
     static OP_Node		*myConstructor(OP_Network*, const char *,
@@ -15,11 +14,9 @@ public:
     /// Stores the description of the interface of the SOP in Houdini.
     /// Each parm template refers to a parameter.
     static PRM_Template		 myTemplateList[];
-	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
-	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
 
 	/// Copy's a prototype instance, used as a base for a new branch module
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
@@ -31,15 +28,15 @@ public:
 
 protected:
 
-	OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op);
-    virtual ~OBJ_Plant();
+	SOP_Plant(OP_Network *net, const char *name, OP_Operator *op);
+    virtual ~SOP_Plant();
 
     /// Disable parameters according to other parameters.
     //virtual unsigned		 disableParms();
 
 
     /// Do the actual Branch SOP computing
-    virtual OP_ERROR		 cookMyObj(OP_Context &context);
+    virtual OP_ERROR		 cookMySop(OP_Context &context);
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
@@ -55,9 +52,9 @@ protected:
 
 private:
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
-	float AGE(fpreal t)     { return evalFloat("ecoAge", 0, t); }
-	float EG1(fpreal t)      { return evalFloat("ecog1",  0, t); }
-	float EG2(fpreal t)      { return evalFloat("ecog2",  0, t); }
+	float AGE(fpreal t)     { return evalFloat("plantAge", 0, t); }
+	float G1(fpreal t)      { return evalFloat("g1",       0, t); }
+	float G2(fpreal t)      { return evalFloat("g2",       0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -70,10 +67,7 @@ private:
 	PrototypeSet* prototypeSet;
 
 	/// SINGLE PLANT
-	/// SOP_Branch* rootModule;
-	//std::vector<SOP_Branch*> rootModules;
-	//int numRootModules;
-	///
+	SOP_Branch* rootModule;
 
 	OP_Node* merger;
 };

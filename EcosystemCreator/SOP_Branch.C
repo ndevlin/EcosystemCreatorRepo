@@ -273,7 +273,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 }
 
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
-void SOP_Branch::setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ) {
+void SOP_Branch::setPlantAndPrototype(SOP_Plant* p, float lambda, float determ) {
 	plant = p;
 	prototype = plant->copyPrototypeFromList(lambda, determ);
 
@@ -368,6 +368,7 @@ void SOP_Branch::setAge(float changeInAge) {
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
+				//newModule->moveToGoodPosition();
 				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here

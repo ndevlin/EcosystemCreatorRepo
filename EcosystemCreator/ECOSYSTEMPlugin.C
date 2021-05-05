@@ -10,7 +10,7 @@ newObjectOperator(OP_OperatorTable *table)
 {
 	table->addOperator(
 		new OP_Operator("EcoPlantNode",                  // Internal name
-						"SinglePlantNode",               // UI name
+						"EcosystemNode",                 // UI name
 	                    OBJ_Plant::myConstructor,	     // How to build the SOP
 	                    OBJ_Plant::buildTemplatePair(0), // My parameters
 	                    OBJ_Plant::theChildTableName,    // Table of child nodes
@@ -28,6 +28,18 @@ void
 newSopOperator(OP_OperatorTable *table)
 {
 	table->addOperator(
+		new OP_Operator("PlantNode",	                     // Internal name
+						"SinglePlant",						 // UI name
+						SOP_Plant::myConstructor,	         // How to build the SOP
+						SOP_Plant::myTemplateList,	         // My parameters
+						SOP_Plant::theChildTableName,
+						0,				                     // Min # of sources
+						1,				                     // Max # of sources
+						SOP_Plant::myVariables,				 // Local variables
+						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
+	);
+
+	table->addOperator(
 		new OP_Operator("BranchModule",	                     // Internal name
 						"MyBranchModule",			         // UI name
 						SOP_Branch::myConstructor,	         // How to build the SOP
@@ -41,30 +53,30 @@ newSopOperator(OP_OperatorTable *table)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declaring parameters here
-static PRM_Name	plantAgeName("plantAge", "PlantAge");
-static PRM_Name	      g1Name("g1",       "TropismDecrease");
-static PRM_Name	      g2Name("g2",       "TropismStrength");
+static PRM_Name	ecoAgeName("ecoAge",    "EcoAge");
+static PRM_Name	 ecog1Name("ecog1",     "EcoTropismDecrease");
+static PRM_Name	 ecog2Name("ecog2",     "EcoTropismStrength");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
-static PRM_Default plantAgeDefault(0.0);
-static PRM_Default	     g1Default(1.0);
-static PRM_Default	     g2Default(-0.2);
+static PRM_Default ecoAgeDefault(0.0);
+static PRM_Default  ecog1Default(1.0);
+static PRM_Default  ecog2Default(-0.2);
 
 // Set up the ranges for the parameter inputs here
-static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
-static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
-static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
+static PRM_Range ecoAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
+static PRM_Range  ecog1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
+static PRM_Range  ecog2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // Put them all together
 PRM_Template
 OBJ_Plant::myTemplateList[] = {
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault, 0, &plantAgeRange),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecoAgeName, &ecoAgeDefault, 0, &ecoAgeRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog1Name,   &ecog1Default, 0, &ecog1Range),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog2Name,   &ecog2Default, 0, &ecog2Range),
 	PRM_Template()
 };
 
@@ -72,12 +84,12 @@ OBJ_Plant::myTemplateList[] = {
 OP_TemplatePair *
 OBJ_Plant::buildTemplatePair(OP_TemplatePair *baseTemplate)
 {
-	OP_TemplatePair *plant, *geo;
+	OP_TemplatePair *ecosystem, *geo;
 	
 	// "Inherit" template pairs from geometry and beyond
 	geo = new OP_TemplatePair(OBJ_Geometry::getTemplateList(OBJ_PARMS_PLAIN), baseTemplate);
-	plant = new OP_TemplatePair(OBJ_Plant::myTemplateList, geo);
-	return plant;
+	ecosystem = new OP_TemplatePair(OBJ_Plant::myTemplateList, geo);
+	return ecosystem;
 }
 
 
@@ -98,11 +110,11 @@ OBJ_Plant::myVariables[] = {
 OP_VariablePair *
 OBJ_Plant::buildVariablePair(OP_VariablePair *baseVariable)
 {
-	OP_VariablePair *plant, *geo;
+	OP_VariablePair *ecosystem, *geo;
 
 	// "Inherit" template pairs from geometry and beyond
-	plant = new OP_VariablePair(OBJ_Plant::myVariables, baseVariable);
-	geo = new OP_VariablePair(OBJ_Geometry::ourLocalVariables, plant);
+	ecosystem = new OP_VariablePair(OBJ_Plant::myVariables, baseVariable);
+	geo = new OP_VariablePair(OBJ_Geometry::ourLocalVariables, ecosystem);
 	return geo;
 }
 
@@ -135,9 +147,19 @@ OBJ_Plant::evalVariableValue(fpreal &val, int index, int thread)
 OP_Node *
 OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
-	OBJ_Plant* newPlant = new OBJ_Plant(net, name, op);
+	OBJ_Plant* newEco = new OBJ_Plant(net, name, op);
 	// TODO take as an input and share across plant instances
-	newPlant->setPrototypeList();
+
+	OP_Node* node = newEco->createNode("PlantNode");
+
+	// Quick issue check
+	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
+	else if (!node->runCreateScript())
+		std::cout << "Plant node constructor error" << std::endl;
+
+	node->moveToGoodPosition();
+
+	/*newPlant->setPrototypeList();
 
 	// Create a merge node to merge all sop output geom
 	OP_Node* mergeNode = newPlant->createNode("merge");
@@ -319,18 +341,18 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	
 	color1->connectToInputNode(*mergeNode, 0, 0);
 	color1->moveToGoodPosition();
-
-	return newPlant;
+	*/
+	return newEco;
 }
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), 
-	prototypeSet(nullptr), /*rootModule(nullptr),*/ numRootModules(0), merger(nullptr)
+	prototypeSet(nullptr), /*rootModule(nullptr), numRootModules(0),*/ merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
-	rootModules = std::vector<SOP_Branch*>();
-	rootModules.push_back(nullptr);
+	//rootModules = std::vector<SOP_Branch*>();
+	//rootModules.push_back(nullptr);
 }
 
 OBJ_Plant::~OBJ_Plant() {}
@@ -353,11 +375,11 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	float g2Val;
 
 	ageVal = AGE(now);
-	g1Val  = G1(now);
-	g2Val  = G2(now);
+	g1Val  = EG1(now);
+	g2Val  = EG2(now);
 
-	BNode::updateG1(g1Val);
-	BNode::updateG2(g2Val);
+	//BNode::updateG1(g1Val);
+	//BNode::updateG2(g2Val);
 	// TODO If we want to also add growth-coeff and thick-coeff as variables here?
 	// for thickness we would only need to rerun the traversal unless time also changes
 	// But this might be more of a prototype-designer sort of thing
@@ -367,10 +389,10 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	///
 	float diff = ageVal - plantAge;
 
-	for(int i = 0; i < numRootModules; i++)
-	{ 
-		rootModules.at(i)->setAge(diff);
-	}
+	//for(int i = 0; i < numRootModules; i++)
+	//{ 
+	//	//rootModules.at(i)->setAge(diff);
+	//}
 	///
 
 	plantAge = ageVal;
@@ -400,7 +422,7 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	//rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
 	//rootModule->setAge(0.0f);
 	///
-	if (numRootModules < 1)
+	/*if (numRootModules < 1)
 	{
 		rootModules[0] = node;
 	}
@@ -410,7 +432,7 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	}
 	node->setPlantAndPrototype(this, 0.0f, 0.0f);
 	node->setAge(0.0f);
-	numRootModules++;
+	numRootModules++;*/
 	///
 }
 

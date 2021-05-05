@@ -20,7 +20,7 @@
 #include <limits.h>
 
 namespace HDK_Sample {
-class OBJ_Plant;
+class SOP_Plant;
 
 extern int branchIDnum;
 
@@ -38,7 +38,7 @@ public:
     static CH_LocalVariable	 myVariables[];
 
 	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
-	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ);
+	void setPlantAndPrototype(SOP_Plant* p, float lambda, float determ);
 
 	/// While setting the parent module, also alters current node data based on last branch
 	void setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode = nullptr);
@@ -106,7 +106,7 @@ private:
 	GU_Agent* moduleAgent;
 	GU_PrimPacked* packedPrim;
 
-	OBJ_Plant* plant;
+	SOP_Plant* plant;
 	BranchPrototype* prototype;
 
 	std::pair<float, float> currAgeRange;

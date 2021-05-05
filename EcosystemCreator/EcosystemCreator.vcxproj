@@ -318,6 +318,7 @@
     <ClCompile Include="BranchPrototype.cpp" />
     <ClCompile Include="PrototypeAgentPtr.cpp" />
     <ClCompile Include="SOP_Branch.C" />
+    <ClCompile Include="SOP_Plant.C" />
     <ClCompile Include="vec.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -334,6 +335,7 @@
     <ClInclude Include="BranchPrototype.h" />
     <ClInclude Include="PrototypeAgentPtr.h" />
     <ClInclude Include="SOP_Branch.h" />
+    <ClInclude Include="SOP_Plant.h" />
     <ClInclude Include="vec.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
