@@ -30,6 +30,19 @@ SOP_Plant::myTemplateList[] = {
 	PRM_Template()
 };
 
+// Based from an HDK sample: merges the parameters of this object with those of its ancestors
+OP_TemplatePair *
+SOP_Plant::buildTemplatePair(OP_TemplatePair *baseTemplate)
+{
+	OP_TemplatePair *plant, *net;
+
+	// "Inherit" template pairs from geometry and beyond
+	//OP_Network::getInterfaceParmTemplates();
+	//net = new OP_TemplatePair(*baseTemplate);
+	plant = new OP_TemplatePair(SOP_Plant::myTemplateList, baseTemplate);//net);
+	return plant;
+}
+
 // Here's how we define local variables for the OBJ.
 enum {
 	VAR_PT,		// Point number of the star
@@ -42,6 +55,19 @@ SOP_Plant::myVariables[] = {
     { "NPT", VAR_NPT, 0 },		// from text string to integer token
     { 0, 0, 0 },
 };
+
+// Trying to fit with the object hierarchy
+OP_VariablePair *
+SOP_Plant::buildVariablePair(OP_VariablePair *baseVariable)
+{
+	OP_VariablePair *plant, *net;
+
+	// "Inherit" template pairs from geometry and beyond
+	plant = new OP_VariablePair(SOP_Plant::myVariables, baseVariable);
+	return plant;
+	//net = new OP_VariablePair(*plant);
+	//return net;
+}
 
 /// Still unsure if we'll need this
 /*bool
@@ -78,13 +104,6 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	std::cout << std::to_string(newPlant->isNetwork()) + " " + std::to_string(newPlant->isSubNetwork(true)) << std::endl;
 
-	//// Create a merge node to merge all sop output geom
-	//OP_Node* mergeNode = newPlant->createNode("merge");
-	//
-	//if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	//else if (!mergeNode->runCreateScript())
-	//	std::cout << "Merge constructor error" << std::endl;
-	//
 	OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
 	
 	// Quick issue check
@@ -101,6 +120,13 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		branchNode_OP->moveToGoodPosition();
 	}
+
+	//// Create a merge node to merge all sop output geom
+	OP_Node* mergeNode = newPlant->createNode("merge");
+
+	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!mergeNode->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
 
 	//
 	//mergeNode->moveToGoodPosition();
@@ -267,9 +293,10 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	//setOperatorTable(getOperatorTable("SOP"));
 	UT_String path;
 	getFullPath(path);
-	if (getOperatorTable("SOP", path)) {
+	if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
 		std::cout << " ITS A TABLE" << std::endl;
 	}
+	std::cout << std::to_string(isNetwork()) + " " + std::to_string(isSubNetwork(true)) << std::endl;
 }
 
 SOP_Plant::~SOP_Plant() {}
