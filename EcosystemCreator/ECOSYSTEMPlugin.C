@@ -27,7 +27,7 @@ newObjectOperator(OP_OperatorTable *table)
 void
 newSopOperator(OP_OperatorTable *table)
 {
-	/*table->addOperator(
+	table->addOperator(
 		new OP_Operator("PlantNode",	                     // Internal name
 						"SinglePlant",						 // UI name
 						SOP_Plant::myConstructor,	         // How to build the SOP
@@ -37,17 +37,6 @@ newSopOperator(OP_OperatorTable *table)
 						1,				                     // Max # of sources
 						SOP_Plant::myVariables,				 // Local variables
 						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
-	);*/
-	table->addOperator(
-		new OP_Operator("PlantNode",					 // Internal name
-						"SinglePlant",					 // UI name
-	                    SOP_Plant::myConstructor,	     // How to build the SOP
-	                    SOP_Plant::buildTemplatePair(0), // My parameters
-	                    SOP_Plant::theChildTableName,    // Table of child nodes
-	                    0, 							     // Min # of sources
-						1,							     // Max # of sources TODO ?
-	                    SOP_Plant::buildVariablePair(0), // Local variables
-						OP_FLAG_NETWORK)		         // Flag it as a network
 	);
 
 	table->addOperator(

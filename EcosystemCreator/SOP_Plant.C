@@ -30,19 +30,6 @@ SOP_Plant::myTemplateList[] = {
 	PRM_Template()
 };
 
-// Based from an HDK sample: merges the parameters of this object with those of its ancestors
-OP_TemplatePair *
-SOP_Plant::buildTemplatePair(OP_TemplatePair *baseTemplate)
-{
-	OP_TemplatePair *plant, *net;
-
-	// "Inherit" template pairs from geometry and beyond
-	//OP_Network::getInterfaceParmTemplates();
-	//net = new OP_TemplatePair(*baseTemplate);
-	plant = new OP_TemplatePair(SOP_Plant::myTemplateList, baseTemplate);//net);
-	return plant;
-}
-
 // Here's how we define local variables for the OBJ.
 enum {
 	VAR_PT,		// Point number of the star
@@ -55,19 +42,6 @@ SOP_Plant::myVariables[] = {
     { "NPT", VAR_NPT, 0 },		// from text string to integer token
     { 0, 0, 0 },
 };
-
-// Trying to fit with the object hierarchy
-OP_VariablePair *
-SOP_Plant::buildVariablePair(OP_VariablePair *baseVariable)
-{
-	OP_VariablePair *plant, *net;
-
-	// "Inherit" template pairs from geometry and beyond
-	plant = new OP_VariablePair(SOP_Plant::myVariables, baseVariable);
-	return plant;
-	//net = new OP_VariablePair(*plant);
-	//return net;
-}
 
 /// Still unsure if we'll need this
 /*bool
@@ -102,35 +76,45 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	// TODO take as an input and share across plant instances
 	newPlant->setPrototypeList();
 
-	std::cout << std::to_string(newPlant->isNetwork()) + " " + std::to_string(newPlant->isSubNetwork(true)) << std::endl;
+	OP_Node* childNet = net->createNode("sopnet");
+	if (!childNet) { std::cout << "Network is Nullptr" << std::endl; }
+	else if (!childNet->runCreateScript())
+		std::cout << "Network constructor error" << std::endl;
+	std::cout << "Made network0" << std::endl;
 
-	OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
-	
-	// Quick issue check
-	if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
-	else if (!branchNode_OP->runCreateScript())
-		std::cout << "Root module constructor error" << std::endl;
-	
-	if (branchNode_OP) {
-		SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
-		newPlant->setRootModule(branchNode);
-		//newPlant->setMerger(mergeNode);
-		newPlant->addToMerger(branchNode);
-		//mergeNode->connectToInputNode(*node, 0);
+	OP_Network* childNet_SOP = (OP_Network*)childNet;
+	std::cout << "Made network" << std::endl;
 
-		branchNode_OP->moveToGoodPosition();
+	if (childNet_SOP) {
+		childNet_SOP->connectToInputNode(*newPlant, 0, 0);
+		std::cout << "Connected network" << std::endl;
+
+		//// Create a merge node to merge all sop output geom
+		OP_Node* mergeNode = childNet_SOP->createNode("merge");
+
+		if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+		else if (!mergeNode->runCreateScript())
+			std::cout << "Merge constructor error" << std::endl;
+
+		// Create the root branch module
+		OP_Node* branchNode_OP = childNet_SOP->createNode("BranchModule"); // "node"
+
+		if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
+		else if (!branchNode_OP->runCreateScript())
+			std::cout << "Root module constructor error" << std::endl;
+
+		if (branchNode_OP && mergeNode) {
+			SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
+			newPlant->setRootModule(branchNode);
+			newPlant->setMerger(mergeNode);
+			newPlant->addToMerger(branchNode);
+			//mergeNode->connectToInputNode(*node, 0);
+
+			branchNode_OP->moveToGoodPosition();
+			mergeNode->moveToGoodPosition();
+		}
+		childNet_SOP->moveToGoodPosition();
 	}
-
-	//// Create a merge node to merge all sop output geom
-	OP_Node* mergeNode = newPlant->createNode("merge");
-
-	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-	//
-	//mergeNode->moveToGoodPosition();
-	//
 	//
 	//// Color for bark
 	//OP_Node* color1 = newPlant->createNode("color");
@@ -288,15 +272,18 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: SOP_Node(net, name, op),
 	prototypeSet(nullptr), rootModule(nullptr), merger(nullptr)
 {
-    myCurrPoint = -1;	// To prevent garbage values from being returned
+	//addChildManager(SOP_OPTYPE_ID);
+	//std::cout << std::to_string(isNetwork()) + " " + std::to_string(isSubNetwork(true)) << std::endl;
+	myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
 	//setOperatorTable(getOperatorTable("SOP"));
-	UT_String path;
+	/*UT_String path;
 	getFullPath(path);
-	if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
-		std::cout << " ITS A TABLE" << std::endl;
-	}
-	std::cout << std::to_string(isNetwork()) + " " + std::to_string(isSubNetwork(true)) << std::endl;
+	buildOperatorTable(*getOperatorTable("SOP", path));
+	//if (getOperatorTable("SOP", path)) {//"sopnet", path)) {
+	//	std::cout << " ITS A TABLE" << std::endl;
+	//}
+	///setAllowBuildDependencies*/
 }
 
 SOP_Plant::~SOP_Plant() {}
@@ -391,6 +378,11 @@ void SOP_Plant::setMerger(OP_Node* mergeNode) {
 
 float SOP_Plant::getAge() {
 	return plantAge;
+}
+
+int HDK_Sample::SOP_Plant::isNetwork() const
+{
+	return 1;
 }
 
 void SOP_Plant::addToMerger(SOP_Branch* bMod) {

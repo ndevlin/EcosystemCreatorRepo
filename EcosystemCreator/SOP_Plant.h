@@ -14,11 +14,9 @@ public:
     /// Stores the description of the interface of the SOP in Houdini.
     /// Each parm template refers to a parameter.
     static PRM_Template		 myTemplateList[];
-	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
-	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
 
 	/// Copy's a prototype instance, used as a base for a new branch module
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
@@ -27,6 +25,8 @@ public:
 	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
 
 	float                     getAge();
+
+	int						  isNetwork() const override;
 
 protected:
 
