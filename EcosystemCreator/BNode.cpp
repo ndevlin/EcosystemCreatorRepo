@@ -139,7 +139,7 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	}
 
 	// Branch thickness update:
-	thickness = max(0.015f, age * baseRadius * 0.3f);
+	thickness = max(0.015f, age * baseRadius * 0.4f);
 	// There's an age difference of 1 between terminal nodes and their children
 	// This is how I've decided to deal with it for now
 	if (parent && isRoot()) { thickness = parent->getThickness(); }
@@ -218,14 +218,53 @@ void BNode::setRigIndex(int idx)
 }
 
 
-UT_Matrix4 BNode::getWorldTransform() {
+/* BNode::getWorldTransform() {
 	if (isRoot() || !parent) {
 		return getLocalTransform();
 	}
 	return getLocalTransform() * parent->getWorldTransform();
+}*/
+
+UT_Matrix4 BNode::getWorldTransform() {
+	UT_Matrix4 transform = UT_Matrix4(1.0f);
+	UT_Vector3 c = UT_Vector3();
+
+	if (!parent) {
+		transform = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
+			getDir(), c, 1));
+	}
+
+	else if (isRoot()) {
+		// Getting the angle of the parent branch segment
+		UT_Vector3 parentDir;
+		if (!parent->isRoot() && parent->getParent()) {
+			parentDir = parent->getPos() - parent->getParent()->getPos();
+		}
+		else if (parent->isRoot() && parent->getParent() && parent->getParent()->getParent()) {
+			// Skipping the terminal node since it's located in the same place as the root node
+			parentDir = parent->getPos() - parent->getParent()->getParent()->getPos();
+		}
+		else { parentDir = parent->getDir(); }
+		//parentDir.normalize();
+
+		transform = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
+			parentDir, c, 1));
+		// TODO append own Dir
+	}
+
+	else {
+		//if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
+		//else					 { parentDir = parent->getDir(); }
+
+		UT_Vector3 currDir = position - parent->getPos();
+		transform = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
+			currDir, c, 1));
+	}
+	transform.setTranslates(position);
+	return transform;
 }
 
-UT_Matrix4 BNode::getLocalTransform() {
+/*UT_Matrix4 BNode::getLocalTransform() {
 	UT_Matrix4 translate = UT_Matrix4(1.0f);
 	UT_Vector3 c = UT_Vector3();
 
@@ -246,10 +285,12 @@ UT_Matrix4 BNode::getLocalTransform() {
 		parentDir = parent->getPos() - parent->getParent()->getParent()->getPos();
 	}
 	else { parentDir = parent->getDir(); }
+	//parentDir.normalize();
 
 	if (isRoot()) {
 		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
 			parentDir, c, 1));
+		// TODO append own Dir
 		translate.setTranslates(position);
 		return translate;
 	}
@@ -257,19 +298,23 @@ UT_Matrix4 BNode::getLocalTransform() {
 	// Getting the angle of the current branch segment
 	UT_Vector3 currDir = position - parent->getPos();
 	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
+	//currDir.normalize();
 
-	UT_Matrix3 orientation3 = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
-	//UT_Matrix3 orientation3 = UT_Matrix3::dihedral(currDir, parentDir, c, 1);
+	UT_Matrix3 orientation3;// = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
 	
-	// The following is safe because thickness doesnt get updated until AFTER 
-	// the agents are created - TODO make a BaseLocalTransform function (using baseRadius)
-	//orientation3.prescale(getThickness(), 1.0f, getThickness());
+	float angle = parentDir.angleTo(currDir);
+	UT_Vector3 axisOfRot = cross(parentDir, currDir);
+	// TODO check clockwise
+	axisOfRot.normalize();
+	UT_Quaternion quatRot = UT_Quaternion(angle, axisOfRot);
+	quatRot.getRotationMatrix(orientation3);
 
 	UT_Matrix4 transform = UT_Matrix4(orientation3);
 	transform.preMultiply(translate);
+	//transform *= translate;
 
 	return transform;
-}
+}*/
 
 /// More forms of updating
 void BNode::recThicknessUpdate(float radiusMultiplier) {

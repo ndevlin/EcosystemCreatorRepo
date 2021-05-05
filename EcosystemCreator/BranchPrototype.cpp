@@ -186,7 +186,7 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, fl
 
 	std::cout << "In selectNewPrototype() " << std::endl;
 
-	return prototypes.at(idx)->copyValues();
-	//return prototypes.at(0)->copyValues();
+	//return prototypes.at(idx)->copyValues();
+	return prototypes.at(0)->copyValues();
 }
 
