@@ -416,6 +416,8 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	for(int i = 0; i < numRootModules; i++)
 	{ 
 		rootModules.at(i)->setAge(diff);
+		rootModules.at(i)->temperature = temperature;
+		rootModules.at(i)->rainfall = rainfall;
 	}
 	///
 

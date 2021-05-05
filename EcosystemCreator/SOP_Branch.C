@@ -57,7 +57,7 @@ SOP_Branch::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
 	: SOP_Node(net, name, op), parentModule(nullptr), childModules(),
 	moduleAgent(nullptr), packedPrim(nullptr), init_agent(true), change_agent(true), 
-	branchID(branchIDnum++)
+	branchID(branchIDnum++), rainfall(0.f), temperature(0.f)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 }

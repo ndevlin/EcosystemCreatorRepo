@@ -165,10 +165,10 @@ PrototypeSet::PrototypeSet(const char* path)
 	prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #5
-	prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
+	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3, path));
 
 	// #6
-	prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3, path));
+	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3, path));
 
 }
 
@@ -178,15 +178,27 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ, fl
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
 	// For now we are passing in values based on plant age solely instead
 
+	/*
 	float r = 1.5f / prototypes.size();
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 
 	int idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX) - 0.00001) + lowerBound) * prototypes.size());
+	*/
+	
+	int idx = int((((rainfall + temperature) / 2.f) - 0.00001f) * prototypes.size());
 
 	std::cout << "In selectNewPrototype() " << std::endl;
 
-	//return prototypes.at(idx)->copyValues();
-	return prototypes.at(0)->copyValues();
+	std::cout << "idx: " << idx << std::endl;
+
+	std::cout << "rainfall: " << rainfall << std::endl;
+
+	std::cout << "temperature: " << temperature << std::endl;
+
+
+
+	return prototypes.at(idx)->copyValues();
+	//return prototypes.at(0)->copyValues();
 }
 
