@@ -443,12 +443,14 @@ SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
 		std::cout << "Plant node constructor error" << std::endl;
-	node->moveToGoodPosition();
 
 	SOP_Plant* newPlant = (SOP_Plant*)node;
-	// It is currently selecting a PlantType randomly in here.
-	// TODO input PlantType based on seeding
-	newPlant->initPlant(this);
+	if (newPlant) {
+		// It is currently selecting a PlantType randomly in here.
+		// TODO input PlantType based on seeding
+		newPlant->initPlant(this);
+		node->moveToGoodPosition();
+	}
 
 	return newPlant;
 }

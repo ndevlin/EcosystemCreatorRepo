@@ -39,21 +39,21 @@ SOP_Plant::myTemplateList[] = {
 
 // Here's how we define local variables for the OBJ.
 enum {
-	VAR_PT,		// Point number of the star
-	VAR_NPT		// Number of points in the star
+	VAR_PT		// Point number of the star
+	//VAR_NPT		// Number of points in the star
 };
 
 CH_LocalVariable
 SOP_Plant::myVariables[] = {
     { "PT",	VAR_PT, 0 },		// The table provides a mapping
-    { "NPT", VAR_NPT, 0 },		// from text string to integer token
+    //{ "NPT", VAR_NPT, 0 },		// from text string to integer token
     { 0, 0, 0 },
 };
 
 const char *SOP_Plant::theChildTableName = SOP_TABLE_NAME;
 
 /// Still unsure if we'll need this
-/*bool
+bool
 SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
 {
     // myCurrPoint will be negative when we're not cooking so only try to
@@ -67,23 +67,21 @@ SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
 		case VAR_PT:
 			val = (fpreal) myCurrPoint;
 			return true;
-		case VAR_NPT:
-			val = (fpreal) myTotalPoints;
-			return true;
+		//case VAR_NPT:
+		//	val = (fpreal) myTotalPoints;
+		//	return true;
 		default:
-			/* do nothing *//*;
+			/* do nothing */;
 		}
     }
     // Not one of our variables, must delegate to the base class.
     return SOP_Node::evalVariableValue(val, index, thread);
-}*/
+}
 
 OP_Node *
 SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	SOP_Plant* newPlant = new SOP_Plant(net, name, op);
-
-
 
 	//// Create a merge node to merge all sop output geom
 	OP_Node* mergeNode = newPlant->createNode("merge");
@@ -92,16 +90,34 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	if (mergeNode) { 
+	if (mergeNode) {
 		mergeNode->moveToGoodPosition();
 		//mergeNode->setBypass(false);
-		mergeNode->setDisplay(true);
+		//mergeNode->setDisplay(true);
 		//mergeNode->setRender(true);
+
 		newPlant->setMerger(mergeNode);
+	}
+
+	//// Create an output node for the network
+	OP_Node* outNode = newPlant->createNode("output");
+	
+	if (!outNode) { std::cout << "Output Node is Nullptr" << std::endl; }
+	else if (!outNode->runCreateScript())
+		std::cout << "Output constructor error" << std::endl;
+
+	if (outNode) {
+		outNode->moveToGoodPosition();
+		outNode->setDisplay(true);
+		outNode->setRender(true);
+
+		// Also handles connection to mergeNode aka newPlant->merger
+		newPlant->setOutput(outNode);
 	}
 
 	//newPlant->setBypass(false);
 	newPlant->moveToGoodPosition();
+	//newPlant->triggerUIChanged(OP_UICHANGE_CONNECTIONS);
 
 	//newPlant->output
 	//newPlant->myOutputNodes.append(mergeNode);
@@ -269,16 +285,17 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
 	///setAllowBuildDependencies
+	///mySopFlags.setManagesDataIDs(true);
 }
 
 SOP_Plant::~SOP_Plant() {}
 
 /// Unsure if we'll need this
-/*unsigned
+unsigned
 SOP_Plant::disableParms()
 {
     return 0;
-}*/
+}
 
 /*OP_ERROR
 SOP_Plant::cookMe(OP_Context &context)
@@ -292,6 +309,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 {
 	std::cout << "PLANT COOK START" << std::endl;
 	fpreal now = context.getTime();
+	myCurrPoint = 0;
 
 	// Get current plant-related values
 	float ageVal;
@@ -316,9 +334,12 @@ SOP_Plant::cookMySop(OP_Context &context)
 
 	if (rootModule) {
 		rootModule->setAge(ageVal - plantAge);
-		rootModule->forceRecook(/*bool evensmartcache = true*/);
-		rootModule->cook(context);
+		//rootModule->forceRecook(/*bool evensmartcache = true*/);
+		//rootModule->cook(context);
 	}
+
+	std::cout << "Num " + std::to_string(nOutputEntries()) << std::endl;
+	std::cout << "If " + std::to_string(hasAnyOutputNodes()) << std::endl;
 
 	plantAge = ageVal;
 	////myDisplayNodePtr
@@ -330,10 +351,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 }
 
 /// SETTERS
-/*void SOP_Plant::setPrototypeList() {
-	// TODO don't create one here. Take as an input and share across plant instances
-	ecosystem->setPrototypeList(); 
-}*/
 
 void SOP_Plant::setRootModule(SOP_Branch* node) {
 	/// SINGLE PLANT
@@ -344,6 +361,16 @@ void SOP_Plant::setRootModule(SOP_Branch* node) {
 
 void SOP_Plant::setMerger(OP_Node* mergeNode) {
 	merger = mergeNode;
+}
+
+void SOP_Plant::setOutput(OP_Node* outNode) {
+	output = outNode;
+
+	myDisplayNodePtr = output;
+	myRenderNodePtr = output;
+	myOutputNodes.append(output);
+
+	if (merger) { output->connectToInputNode(*merger, 0, 0); }
 }
 
 void SOP_Plant::initPlant(OBJ_Plant * eco)
@@ -372,6 +399,7 @@ void SOP_Plant::initPlant(OBJ_Plant * eco)
 
 			std::cout << "Made branch and merge nodes" << std::endl;
 		}
+		//triggerUIChanged(OP_UICHANGE_CONNECTIONS);
 	}
 	else {
 		std::cout << "NO PLANT TYPES ARE DEFINED" << std::endl;
@@ -388,17 +416,45 @@ float SOP_Plant::getAge() {
 //	return 1;
 //}
 
+// Defining the children
 const char *
 SOP_Plant::getChildType() const
 {
-    return SOP_OPTYPE_NAME;
+	return SOP_OPTYPE_NAME;
 }
 
 OP_OpTypeId
 SOP_Plant::getChildTypeID() const
 {
-    return SOP_OPTYPE_ID;
+	return SOP_OPTYPE_ID;
 }
+
+// Defining self
+const char *
+SOP_Plant::getOpType() const
+{
+	return SOP_MANAGEMENT_OPTYPE;
+}
+
+OP_OpTypeId
+SOP_Plant::getOpTypeID() const
+{
+	return SOP_OPTYPE_ID;
+}
+
+//OP_Node*
+//SOP_Plant::getDisplayNodePtr()
+//{
+//	// TODO add if output else this
+//	return output;
+//}
+//
+//OP_Node*
+//SOP_Plant::getRenderNodePtr()
+//{
+//	// TODO add if output else this
+//	return output;
+//}
 
 OP_OperatorTable *
 SOP_Plant::createAndGetOperatorTable()
@@ -407,6 +463,16 @@ SOP_Plant::createAndGetOperatorTable()
     OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
 	// TODO maybe add Branch Module here since it's dependent on parent
 
+	table.addOperator(new OP_Operator("hdk_inout11_",
+		"In-Out 1-1",
+		SOP_CustomOutput::myConstructor,
+		SOP_CustomOutput::myTemplateList,
+		SOP_CustomOutput::theChildTableName,
+		0,
+		10,
+		NULL,
+		OP_FLAG_UNORDERED)
+	);
     // Procedurally create some simple operator types for illustrative purposes.
     //table.addOperator(new sop_CustomVopOperator("hdk_inout11_", "In-Out 1-1"));
     //table.addOperator(new sop_CustomVopOperator("hdk_inout21_", "In-Out 2-1"));
@@ -433,3 +499,146 @@ BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
 	return plantType->copyPrototypeFromList(lambda, determ);
 }
 
+///////////////////////////////////////////////////////
+//// SOP CUSTOM OUTPUT NODE ///////////////////////////
+
+static PRM_Name    sopCustomPlugInputs("inputs", "Inputs");
+static PRM_Name    sopCustomPlugInpName("inpplug#", "Input Name #");
+static PRM_Default sopCustomPlugInpDefault(0, "input1");
+static PRM_Name    sopCustomPlugOutputs("outputs", "Outputs");
+static PRM_Name    sopCustomPlugOutName("outplug#", "Output Name #");
+static PRM_Default sopCustomPlugOutDefault(0, "output1");
+
+static PRM_Template
+sopCustomPlugInpTemplate[] =
+{
+    PRM_Template(PRM_ALPHASTRING, 1, &sopCustomPlugInpName, &sopCustomPlugInpDefault),
+    PRM_Template() // List terminator
+};
+static PRM_Template
+sopCustomPlugOutTemplate[] =
+{
+    PRM_Template(PRM_ALPHASTRING, 1, &sopCustomPlugOutName, &sopCustomPlugOutDefault),
+    PRM_Template() // List terminator
+};
+
+/// Stores the description of the interface of the SOP in Houdini.
+PRM_Template
+SOP_CustomOutput::myTemplateList[]= 
+{
+    PRM_Template(PRM_MULTITYPE_LIST, sopCustomPlugInpTemplate, 0, &sopCustomPlugInputs,
+                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
+
+    PRM_Template(PRM_MULTITYPE_LIST, sopCustomPlugOutTemplate, 0, &sopCustomPlugOutputs,
+                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
+
+    PRM_Template()              // List terminator
+};
+
+OP_Node* 
+SOP_CustomOutput::myConstructor(OP_Network* net, const char* name, OP_Operator* op) {
+	return new SOP_CustomOutput(net, name, op);
+}
+
+SOP_CustomOutput::SOP_CustomOutput(OP_Network* net, const char* name, OP_Operator* op)
+	: SOP_Node(net, name, op)
+{
+	// Add our event handler.
+	addOpInterest(this, &SOP_CustomOutput::nodeEventHandler);
+}
+SOP_CustomOutput::~SOP_CustomOutput() {
+	removeOpInterest(this, &SOP_CustomOutput::nodeEventHandler);
+}
+
+/// Overridden for some reason!
+bool 
+SOP_CustomOutput::runCreateScript() {
+	if (!SOP_Node::runCreateScript()) { return false; }
+
+	fpreal        t = CHgetEvalTime();
+	UT_WorkBuffer plugname;
+
+	// TODO change
+	// For simplicity, we just initialize our number of inputs/outputs based
+	// upon our node type name.
+	const UT_StringHolder& type_name = getOperator()->getName();
+	int n = type_name.c_str()[type_name.length() - 3] - '0';
+	setInt(sopCustomPlugInputs.getToken(), 0, t, n);
+
+	for (int i = 0; i < n; i++)
+	{
+	    plugname.sprintf("input%d", i + 1);
+	    setStringInst(plugname.buffer(), CH_STRING_LITERAL,
+			sopCustomPlugInpName.getToken(), &i, 0, t);
+	}
+	
+	n = type_name.c_str()[type_name.length() - 2] - '0';
+	setInt(sopCustomPlugOutputs.getToken(), 0, t, n);
+
+	int i = 0;
+	plugname.sprintf("output%d", i + 1);
+	setStringInst(plugname.buffer(), CH_STRING_LITERAL,
+		sopCustomPlugOutName.getToken(), &i, 0, t);
+	
+	return true;
+}
+
+/// Provides the labels to appear on input and output buttons.
+const char* 
+SOP_CustomOutput::inputLabel(unsigned idx) const {
+	static UT_WorkBuffer theLabel;
+	UT_String label;
+	int i = idx;
+	
+	// Evaluate our label from the corresponding parameter.
+	evalStringInst(sopCustomPlugInpName.getToken(), &i, label, 0, CHgetEvalTime());
+	
+	if (label.isstring()) { theLabel.strcpy(label); }
+	else { theLabel.strcpy("<unnamed>"); }
+	
+	return theLabel.buffer();
+}
+
+const char* 
+SOP_CustomOutput::outputLabel(unsigned idx) const {
+	static UT_WorkBuffer theLabel;
+	UT_String label;
+	int i = idx;
+
+	// Evaluate our label from the corresponding parameter.
+	evalStringInst(sopCustomPlugOutName.getToken(), &i, label, 0, CHgetEvalTime());
+
+	if (label.isstring()) { theLabel.strcpy(label); }
+	else { theLabel.strcpy("<unnamed>"); }
+
+	return theLabel.buffer();
+}
+
+/// Controls the number of input/output buttons visible on the node tile.
+unsigned 
+SOP_CustomOutput::getNumVisibleInputs() const {
+	return evalInt("inputs", 0, CHgetEvalTime());
+}
+
+unsigned 
+SOP_CustomOutput::getNumVisibleOutputs() const {
+	return evalInt("outputs", 0, CHgetEvalTime());
+}
+
+void 
+SOP_CustomOutput::nodeEventHandler(OP_Node *caller, void *callee,
+	OP_EventType type, void *data) {
+	switch (type)
+	{
+	    case OP_PARM_CHANGED:
+	        static_cast<SOP_CustomOutput*>(callee)->handleParmChanged((int)(intptr_t)data);
+	        break;
+	    default:
+	        break;
+	}
+}
+
+void 
+SOP_CustomOutput::handleParmChanged(int parm_index) {
+	triggerUIChanged(OP_UICHANGE_CONNECTIONS);
+}

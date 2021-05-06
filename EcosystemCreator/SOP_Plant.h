@@ -5,6 +5,8 @@
 #include <SOP_Branch.h>
 #include "PlantType.h"
 
+#include <CH/CH_Manager.h>
+
 namespace HDK_Sample {
 class OBJ_Plant;
 
@@ -40,8 +42,12 @@ public:
 	/// We override these to specify that our child network type is VOPs.
     const char*               getChildType() const override;
     OP_OpTypeId               getChildTypeID() const override;
-	//OP_Node                     *getDisplayNodePtr() override;
-	//OP_Node                     *getRenderNodePtr() override;
+
+	const char*				  getOpType() const override;
+	OP_OpTypeId				  getOpTypeID() const override;
+
+	//OP_Node*                  getDisplayNodePtr() override;
+	//OP_Node*                  getRenderNodePtr() override;
 
 	/// Override this to provide custom behaviour for what is allowed in the
     /// tab menu.
@@ -60,26 +66,30 @@ protected:
     virtual ~SOP_Plant();
 
     /// Disable parameters according to other parameters.
-    //virtual unsigned		 disableParms();
+    virtual unsigned		 disableParms();
 
 
-    /// Do the actual Branch SOP computing
+    /// Do the actual Plant SOP computing
     virtual OP_ERROR		 cookMySop(OP_Context &context);
+
+	virtual bool			 cookDataForAnyOutput() const override
+								{ return true; }
 
 	/// Inspired by custom vop example
 	OP_OperatorTable *       createAndGetOperatorTable();
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
-    /*virtual bool evalVariableValue(fpreal &val, int index, int thread);
+    virtual bool evalVariableValue(fpreal &val, int index, int thread);
     // Add virtual overload that delegates to the super class to avoid
     // shadow warnings.
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
-				 { return evalVariableValue(v, i, thread); }*/
+				 { return evalVariableValue(v, i, thread); }
 
 	//void setPrototypeList();
 	void setRootModule(SOP_Branch* node);
 	void setMerger(OP_Node* mergeNode);
+	void setOutput(OP_Node* outNode);
 
 private:
 	SOP_CustomSopOperatorFilter myOperatorFilter;
@@ -93,7 +103,7 @@ private:
     /// These are just used to transfer data to the local variable callback.
     /// Another use for local data is a cache to store expensive calculations."
     int		myCurrPoint;
-    int		myTotalPoints;
+    //int		myTotalPoints;
 
 	float plantAge;
 
@@ -105,7 +115,53 @@ private:
 	SOP_Branch* rootModule;
 
 	OP_Node* merger;
+	OP_Node* output;
 };
+
+
+
+
+class SOP_CustomOutput : public SOP_Node
+{
+public:
+	static OP_Node		*myConstructor(OP_Network*, const char *,
+							    OP_Operator *);
+
+	/// Stores the description of the interface of the SOP in Houdini.
+	static PRM_Template		 myTemplateList[];
+
+	/// Overridden for some reason!
+	bool                     runCreateScript() override;
+
+	/// Provides the labels to appear on input and output buttons.
+	// @{
+	const char *             inputLabel(unsigned idx) const override;
+	const char *             outputLabel(unsigned idx) const override;
+	// @}
+	/// Controls the number of input/output buttons visible on the node tile.
+	// @{
+	unsigned                 getNumVisibleInputs() const override;
+	unsigned                 getNumVisibleOutputs() const override;
+	// @}
+
+protected:
+	SOP_CustomOutput(OP_Network *net, const char *name, OP_Operator *op);
+	~SOP_CustomOutput() override;
+
+	virtual OP_ERROR		 cookMySop(OP_Context &context) { return error(); }
+
+	/// Internal name of input, used by getCode
+	//void                     getInputNameSubclass(UT_String &name,
+	//								int idx) const override;
+	//int                      getInputFromNameSubclass(const UT_String &name) const override;
+
+private: 
+	static void              nodeEventHandler(OP_Node *caller, void *callee,
+											  OP_EventType type, void *data);
+
+	void                     handleParmChanged(int parm_index);
+};
+
 } // End HDK_Sample namespace
 
 #endif

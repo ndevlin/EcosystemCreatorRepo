@@ -12,14 +12,14 @@ SOP_Branch::myTemplateList[] = {
 
 // Here's how we define local variables for the SOP.
 enum {
-	VAR_PT,		// Point number of the star
-	VAR_NPT		// Number of points in the star
+	VAR_PT		// Point number of the star
+	//VAR_NPT		// Number of points in the star
 };
 
 CH_LocalVariable
 SOP_Branch::myVariables[] = {
     { "PT",	VAR_PT, 0 },		// The table provides a mapping
-    { "NPT", VAR_NPT, 0 },		// from text string to integer token
+    //{ "NPT", VAR_NPT, 0 },		// from text string to integer token
     { 0, 0, 0 },
 };
 
@@ -37,9 +37,9 @@ SOP_Branch::evalVariableValue(fpreal &val, int index, int thread)
 		case VAR_PT:
 			val = (fpreal) myCurrPoint;
 			return true;
-		case VAR_NPT:
-			val = (fpreal) myTotalPoints;
-			return true;
+		//case VAR_NPT:
+		//	val = (fpreal) myTotalPoints;
+		//	return true;
 		default:
 			/* do nothing */;
 		}

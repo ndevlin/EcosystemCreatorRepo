@@ -96,7 +96,7 @@ private:
 
     /// Any local variables:
     int		myCurrPoint;
-    int		myTotalPoints;
+    //int		myTotalPoints;
 
 	int		branchID;
 
