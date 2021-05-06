@@ -368,8 +368,10 @@ void SOP_Branch::setAge(float changeInAge) {
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
 
 				// TODO: set lambda and determ properly
-				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
+				//newModule->setBypass(false);
+				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
 				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
+				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
 				newModule->setParentModule(this, terminalNode);
 				newModule->setAge(0.0f);
 				newModule->setInput(0, this);
@@ -382,7 +384,6 @@ void SOP_Branch::setAge(float changeInAge) {
 
 				terminalNode->addModuleChild(newModule);
 				childModules.push_back(newModule);
-				//newModules.push_back(newModule);
 			}
 		}
 		else if (decay && !childModules.empty()) {

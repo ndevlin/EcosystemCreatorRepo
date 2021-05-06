@@ -83,6 +83,8 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	SOP_Plant* newPlant = new SOP_Plant(net, name, op);
 
+
+
 	//// Create a merge node to merge all sop output geom
 	OP_Node* mergeNode = newPlant->createNode("merge");
 
@@ -91,35 +93,21 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		std::cout << "Merge constructor error" << std::endl;
 
 	if (mergeNode) { 
-		newPlant->setMerger(mergeNode); 
 		mergeNode->moveToGoodPosition();
+		//mergeNode->setBypass(false);
+		mergeNode->setDisplay(true);
+		//mergeNode->setRender(true);
+		newPlant->setMerger(mergeNode);
 	}
 
-	//// Create the root branch module
-	//OP_Node* branchNode_OP = newPlant->createNode("BranchModule"); // "node"
-	//
-	//if (!branchNode_OP) { std::cout << "Root module is Nullptr" << std::endl; }
-	//else if (!branchNode_OP->runCreateScript())
-	//	std::cout << "Root module constructor error" << std::endl;
-	//
-	//std::cout << "Made branch and merge nodes" << std::endl;
-	//
-	//if (branchNode_OP && mergeNode) {
-	//	SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
-	//	newPlant->setRootModule(branchNode);
-	//	//newPlant->setMerger(mergeNode);
-	//	newPlant->addToMerger(branchNode);
-	//	//mergeNode->connectToInputNode(*node, 0);
-	//
-	//	branchNode_OP->moveToGoodPosition();
-	//	//mergeNode->moveToGoodPosition();
-	//}
+	//newPlant->setBypass(false);
 	newPlant->moveToGoodPosition();
 
-	newPlant->myOutputNodes.append(mergeNode);
-	newPlant->getOutputSop(0, true);
 	//newPlant->output
-	newPlant->setOutputForView(0);
+	//newPlant->myOutputNodes.append(mergeNode);
+	//newPlant->getOutputSop(0, true);
+	//newPlant->setOutputForView(0);
+
 	//
 	//// Color for bark
 	//OP_Node* color1 = newPlant->createNode("color");
@@ -328,9 +316,13 @@ SOP_Plant::cookMySop(OP_Context &context)
 
 	if (rootModule) {
 		rootModule->setAge(ageVal - plantAge);
+		rootModule->forceRecook(/*bool evensmartcache = true*/);
+		rootModule->cook(context);
 	}
 
 	plantAge = ageVal;
+	////myDisplayNodePtr
+	//resetDisplayNodePtr
 
     myCurrPoint = -1;
 	std::cout << "PLANT COOK END" << std::endl;
@@ -370,14 +362,15 @@ void SOP_Plant::initPlant(OBJ_Plant * eco)
 			else if (!branchNode_OP->runCreateScript())
 				std::cout << "Root module constructor error" << std::endl;
 
-			std::cout << "Made branch and merge nodes" << std::endl;
-
 			if (branchNode_OP) {
 				SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
+				//branchNode->setBypass(false);
 				setRootModule(branchNode);
 				addToMerger(branchNode);
 				branchNode_OP->moveToGoodPosition();
 			}
+
+			std::cout << "Made branch and merge nodes" << std::endl;
 		}
 	}
 	else {
@@ -390,10 +383,10 @@ float SOP_Plant::getAge() {
 }
 
 /// Functions related to making this a network
-int SOP_Plant::isNetwork() const
-{
-	return 1;
-}
+//int SOP_Plant::isNetwork() const
+//{
+//	return 1;
+//}
 
 const char *
 SOP_Plant::getChildType() const
@@ -412,6 +405,7 @@ SOP_Plant::createAndGetOperatorTable()
 {
     // We chain our custom VOP operators onto the default VOP operator table.
     OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
+	// TODO maybe add Branch Module here since it's dependent on parent
 
     // Procedurally create some simple operator types for illustrative purposes.
     //table.addOperator(new sop_CustomVopOperator("hdk_inout11_", "In-Out 1-1"));

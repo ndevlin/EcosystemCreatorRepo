@@ -35,11 +35,13 @@ public:
 
 	float                     getAge();
 
-	int						  isNetwork() const override;
+	//int						  isNetwork() const override;
 
 	/// We override these to specify that our child network type is VOPs.
     const char*               getChildType() const override;
     OP_OpTypeId               getChildTypeID() const override;
+	//OP_Node                     *getDisplayNodePtr() override;
+	//OP_Node                     *getRenderNodePtr() override;
 
 	/// Override this to provide custom behaviour for what is allowed in the
     /// tab menu.
