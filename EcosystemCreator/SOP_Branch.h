@@ -106,8 +106,7 @@ private:
 	GU_Agent* moduleAgent;
 	GU_PrimPacked* packedPrim;
 
-	SOP_Plant* plant; // TODO make adaptable - get from input every cook, 
-					//then swap plant if plant still points to this
+	SOP_Plant* plant;
 	BranchPrototype* prototype;
 
 	std::pair<float, float> currAgeRange;

@@ -112,20 +112,19 @@ private:
     /// These are just used to transfer data to the local variable callback.
     /// Another use for local data is a cache to store expensive calculations."
     int		myCurrPoint;
-    //int		myTotalPoints;
 
 	float plantAge;
 
 	std::shared_ptr<PlantType> plantType;
 	OBJ_Plant* ecosystem;
-	//PrototypeSet* prototypeSet;
 
 	/// SINGLE PLANT
 	SOP_Branch* rootModule; // TODO make adaptable
 
 	OP_Node* branchNet;
 	OP_Node* merger;
-	SOP_Node* output;
+	SOP_Node* output;// TODO make adaptable - if suddenly null (or when UI Change Event), 
+					//replace with lowest non-branchModule node
 };
 
 

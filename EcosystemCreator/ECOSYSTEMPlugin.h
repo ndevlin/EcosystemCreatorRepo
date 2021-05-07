@@ -70,7 +70,7 @@ private:
     int		myCurrPoint;
     int		myTotalPoints;
 
-	float plantAge;
+	float worldAge;
 
 	PrototypeSet* prototypeSet;
 

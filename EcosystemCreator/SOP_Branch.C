@@ -176,6 +176,7 @@ OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
 	fpreal now = context.getTime();
+	flags().setTimeDep(false);
 
 	// Cylinder variables
     UT_Interrupt	*boss;

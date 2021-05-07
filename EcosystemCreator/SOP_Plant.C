@@ -302,8 +302,10 @@ SOP_Plant::cookMe(OP_Context &context)
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
+	std::cout << "reached" << std::endl;
 	fpreal now = context.getTime();
 	myCurrPoint = 0;
+	flags().setTimeDep(false);
 
 	// Get current plant-related values
 	float ageVal;

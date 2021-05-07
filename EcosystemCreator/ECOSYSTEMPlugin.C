@@ -358,12 +358,10 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), plantTypes(),
-	prototypeSet(nullptr), /*rootModule(nullptr), numRootModules(0),*/ eco_merger(nullptr)
+	prototypeSet(nullptr), eco_merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
-	plantAge = 0.0f;
-	//rootModules = std::vector<SOP_Branch*>();
-	//rootModules.push_back(nullptr);
+	worldAge = 0.0f; // TODO getTime from net
 }
 
 OBJ_Plant::~OBJ_Plant() {}
@@ -380,6 +378,10 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 {
 	std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
+	// For some reason: only cooks on every new frame (however, plant does)
+	flags().setTimeDep(true);
+	flags().setTimeInterest(true);
+	std::cout << std::to_string(now) << std::endl;
 
 	// Get current plant-related values
 	float ageVal;
@@ -397,9 +399,9 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	// But this might be more of a prototype-designer sort of thing
 
 	/// SINGLE PLANT
-	//rootModule->setAge(ageVal - plantAge);
+	//rootModule->setAge(ageVal - worldAge);
 	///
-	float diff = ageVal - plantAge;
+	float diff = ageVal - worldAge;
 
 	//for(int i = 0; i < numRootModules; i++)
 	//{ 
@@ -407,7 +409,7 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	//}
 	///
 
-	plantAge = ageVal;
+	worldAge = ageVal;
 
 
 	// Run geometry cook, needed to process primitive inputs
@@ -487,7 +489,7 @@ SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
 }
 
 float OBJ_Plant::getAge() {
-	return plantAge;
+	return worldAge;
 }
 
 void OBJ_Plant::addToMerger(OP_Node* pNode) {
