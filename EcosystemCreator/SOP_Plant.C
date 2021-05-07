@@ -106,13 +106,15 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!outNode->runCreateScript())
 		std::cout << "Output constructor error" << std::endl;
 
-	if (outNode) {
-		outNode->moveToGoodPosition();
-		outNode->setDisplay(true);
-		outNode->setRender(true);
+	SOP_Node* outNode_sop = (SOP_Node*)outNode;
+
+	if (outNode_sop) {
+		outNode_sop->moveToGoodPosition();
+		outNode_sop->setDisplay(true);
+		outNode_sop->setRender(true);
 
 		// Also handles connection to mergeNode aka newPlant->merger
-		newPlant->setOutput(outNode);
+		newPlant->setOutput(outNode_sop);
 	}
 
 	//newPlant->setBypass(false);
@@ -291,11 +293,11 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 SOP_Plant::~SOP_Plant() {}
 
 /// Unsure if we'll need this
-unsigned
-SOP_Plant::disableParms()
-{
-    return 0;
-}
+//unsigned
+//SOP_Plant::disableParms()
+//{
+//    return 0;
+//}
 
 /*OP_ERROR
 SOP_Plant::cookMe(OP_Context &context)
@@ -307,7 +309,6 @@ SOP_Plant::cookMe(OP_Context &context)
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
-	std::cout << "PLANT COOK START" << std::endl;
 	fpreal now = context.getTime();
 	myCurrPoint = 0;
 
@@ -328,34 +329,35 @@ SOP_Plant::cookMySop(OP_Context &context)
     
     // For ecosystem
 	if (ecosystem) {
-		std::cout << "ECO Adding interest" << std::endl;
 		addExtraInput(ecosystem, OP_INTEREST_DATA);
 	}
 
 	if (rootModule) {
 		rootModule->setAge(ageVal - plantAge);
-		//rootModule->forceRecook(/*bool evensmartcache = true*/);
-		//rootModule->cook(context);
 	}
 
-	std::cout << "Num " + std::to_string(nOutputEntries()) << std::endl;
-	std::cout << "If " + std::to_string(hasAnyOutputNodes()) << std::endl;
-
-	UT_Array<OP_Node*> outs;
-	getOutputNodes(outs);
-	std::cout << "NumOut " + std::to_string(outs.size()) << std::endl;
-
-	for (OP_Node* o : outs) {
-
+	// TODO maybe cook output?
+	if (output) {
+		gdp->stashAll();
+		gdp->merge(*output->getCookedGeo(context), nullptr, true, false, nullptr, true, GA_DATA_ID_CLONE);
+		gdp->destroyStashed();
 	}
 
 	plantAge = ageVal;
-	////myDisplayNodePtr
-	//resetDisplayNodePtr
 
     myCurrPoint = -1;
-	std::cout << "PLANT COOK END" << std::endl;
 	return error();//errorstatus;
+}
+
+
+GU_DetailHandle
+SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interests) {
+	if (output) {
+		return output->cookOutput(context, outputidx, interests);
+	}
+	else {
+		return SOP_Node::cookMySopOutput(context, outputidx, interests);
+	}
 }
 
 /// SETTERS
@@ -371,7 +373,7 @@ void SOP_Plant::setMerger(OP_Node* mergeNode) {
 	merger = mergeNode;
 }
 
-void SOP_Plant::setOutput(OP_Node* outNode) {
+void SOP_Plant::setOutput(SOP_Node* outNode) {
 	output = outNode;
 
 	//myDisplayNodePtr = output;
@@ -404,10 +406,8 @@ void SOP_Plant::initPlant(OBJ_Plant * eco)//, OP_Node* branchNet)
 				addToMerger(branchNode);
 				branchNode_OP->moveToGoodPosition();
 			}
-
-			std::cout << "Made branch and merge nodes" << std::endl;
 		}
-		//triggerUIChanged(OP_UICHANGE_CONNECTIONS);
+		triggerUIChanged(OP_UICHANGE_CONNECTIONS);
 	}
 	else {
 		std::cout << "NO PLANT TYPES ARE DEFINED" << std::endl;
@@ -455,44 +455,12 @@ SOP_Plant::getOpTypeID() const
 	return SOP_OPTYPE_ID;
 }
 
-//OP_Node*
-//SOP_Plant::getDisplayNodePtr()
-//{
-//	// TODO add if output else this
-//	return output;
-//}
-//
-//OP_Node*
-//SOP_Plant::getRenderNodePtr()
-//{
-//	// TODO add if output else this
-//	return output;
-//}
-
 OP_OperatorTable *
 SOP_Plant::createAndGetOperatorTable()
 {
     // We chain our custom VOP operators onto the default VOP operator table.
     OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
 	// TODO maybe add Branch Module here since it's dependent on parent
-
-	//table.createNode
-
-	/*table.addOperator(new OP_Operator("hdk_inout11_",
-		"In-Out 1-1",
-		SOP_CustomOutput::myConstructor,
-		SOP_CustomOutput::myTemplateList,
-		SOP_CustomOutput::theChildTableName,
-		0,
-		10,
-		NULL,
-		OP_FLAG_UNORDERED)
-	);*/
-    // Procedurally create some simple operator types for illustrative purposes.
-    //table.addOperator(new sop_CustomVopOperator("hdk_inout11_", "In-Out 1-1"));
-    //table.addOperator(new sop_CustomVopOperator("hdk_inout21_", "In-Out 2-1"));
-    //table.addOperator(new sop_CustomVopOperator("hdk_inout12_", "In-Out 1-2"));
-    //table.addOperator(new sop_CustomVopOperator("hdk_inout22_", "In-Out 2-2"));
 
     // Notify observers of the operator table that it has been changed.
     table.notifyUpdateTableSinksOfUpdate();
@@ -529,7 +497,7 @@ SOP_Plant::outputLabel(unsigned idx) const {
 	static UT_WorkBuffer theLabel;
 	int i = idx;
 
-	theLabel.strcpy("outToBranches" + std::to_string(i));
+	theLabel.strcpy("plantGeom" + std::to_string(i));
 	return theLabel.buffer();
 }
 

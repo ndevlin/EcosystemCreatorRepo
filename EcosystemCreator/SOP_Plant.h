@@ -47,9 +47,6 @@ public:
 	const char*				  getOpType() const override;
 	OP_OpTypeId				  getOpTypeID() const override;
 
-	//OP_Node*                  getDisplayNodePtr() override;
-	//OP_Node*                  getRenderNodePtr() override;
-
 	/// Override this to provide custom behaviour for what is allowed in the
     /// tab menu.
     OP_OperatorFilter*        getOperatorFilter() override
@@ -68,9 +65,7 @@ public:
 	unsigned                 getNumVisibleOutputs() const override;
 	// @}
 
-	//void setEcosystem(OBJ_Plant* eco);
-	void initPlant(OBJ_Plant* eco);// , OP_Node* branchNet);
-	//virtual OP_ERROR		  cookMe(OP_Context &context);
+	void initPlant(OBJ_Plant* eco);
 
 protected:
 
@@ -78,11 +73,13 @@ protected:
     virtual ~SOP_Plant();
 
     /// Disable parameters according to other parameters.
-    virtual unsigned		 disableParms();
+    //virtual unsigned		 disableParms();
 
 
     /// Do the actual Plant SOP computing
-    virtual OP_ERROR		 cookMySop(OP_Context &context);
+	virtual OP_ERROR		 cookMySop(OP_Context &context);
+	GU_DetailHandle			 cookMySopOutput(OP_Context &context,
+								int outputidx, SOP_Node* interests) override;
 
 	virtual bool			 cookDataForAnyOutput() const override
 								{ return true; }
@@ -101,7 +98,7 @@ protected:
 	//void setPrototypeList();
 	void setRootModule(SOP_Branch* node);
 	void setMerger(OP_Node* mergeNode);
-	void setOutput(OP_Node* outNode);
+	void setOutput(SOP_Node* outNode);
 
 private:
 	SOP_CustomSopOperatorFilter myOperatorFilter;
@@ -128,7 +125,7 @@ private:
 
 	OP_Node* branchNet;
 	OP_Node* merger;
-	OP_Node* output;
+	SOP_Node* output;
 };
 
 

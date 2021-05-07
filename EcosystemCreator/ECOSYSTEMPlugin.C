@@ -462,24 +462,25 @@ SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
 		std::cout << "Plant node constructor error" << std::endl;
 
 	// Create a subnetwork to store tree of branch modules
-	OP_Node* branchNet = createNode("subnet");
-	
-	if (!branchNet) { std::cout << "SubNetwork is Nullptr" << std::endl; }
-	else if (!branchNet->runCreateScript())
-		std::cout << "SubNetwork constructor error" << std::endl;
+	//OP_Node* branchNet = createNode("subnet");
+	//
+	//if (!branchNet) { std::cout << "SubNetwork is Nullptr" << std::endl; }
+	//else if (!branchNet->runCreateScript())
+	//	std::cout << "SubNetwork constructor error" << std::endl;
 
 	SOP_Plant* newPlant = (SOP_Plant*)node;
 	if (newPlant) {// && branchNet) {
 		// It is currently selecting a PlantType randomly in here.
 		// TODO input PlantType based on seeding
-		branchNet->connectToInputNode(*newPlant, 0, 0);
-		newPlant->initPlant(this, branchNet);
+		
+		//branchNet->connectToInputNode(*newPlant, 0, 0);
+		newPlant->initPlant(this);
 
-		addToMerger(branchNet);
-		//addToMerger(newPlant);
+		//addToMerger(branchNet);
+		addToMerger(newPlant);
 
 		node->moveToGoodPosition();
-		branchNet->moveToGoodPosition();
+		//branchNet->moveToGoodPosition();
 	}
 
 	return newPlant;
