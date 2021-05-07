@@ -148,6 +148,17 @@ OP_Node *
 OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	OBJ_Plant* newEco = new OBJ_Plant(net, name, op);
+
+	//// Create a merge node to merge all sop output geom
+	OP_Node* mergeNode = newEco->createNode("merge");
+
+	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!mergeNode->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+
+	if (mergeNode) { newEco->setMerger(mergeNode); }
+
+	/////// PLANTS
 	
 	// Initialize however many plant types you want, right now the constructor is the same for each
 	// TODO diversify
@@ -156,6 +167,8 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	// Initialize plant from current ecosystem parameters
 	// TODO maybe select PlantType here
 	newEco->createPlant(/*add position maybe*/);
+
+	if (mergeNode) { mergeNode->moveToGoodPosition(); }
 
 	/*newPlant->setPrototypeList();
 
@@ -345,7 +358,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), plantTypes(),
-	prototypeSet(nullptr), /*rootModule(nullptr), numRootModules(0),*/ merger(nullptr)
+	prototypeSet(nullptr), /*rootModule(nullptr), numRootModules(0),*/ eco_merger(nullptr)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
@@ -435,7 +448,11 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 }
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {
-	merger = mergeNode;
+	if (mergeNode) {
+		mergeNode->setDisplay(true);
+		mergeNode->setRender(true);
+		eco_merger = mergeNode;
+	}
 }
 
 SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
@@ -444,12 +461,25 @@ SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
 	else if (!node->runCreateScript())
 		std::cout << "Plant node constructor error" << std::endl;
 
+	// Create a subnetwork to store tree of branch modules
+	OP_Node* branchNet = createNode("subnet");
+	
+	if (!branchNet) { std::cout << "SubNetwork is Nullptr" << std::endl; }
+	else if (!branchNet->runCreateScript())
+		std::cout << "SubNetwork constructor error" << std::endl;
+
 	SOP_Plant* newPlant = (SOP_Plant*)node;
-	if (newPlant) {
+	if (newPlant) {// && branchNet) {
 		// It is currently selecting a PlantType randomly in here.
 		// TODO input PlantType based on seeding
-		newPlant->initPlant(this);
+		branchNet->connectToInputNode(*newPlant, 0, 0);
+		newPlant->initPlant(this, branchNet);
+
+		addToMerger(branchNet);
+		//addToMerger(newPlant);
+
 		node->moveToGoodPosition();
+		branchNet->moveToGoodPosition();
 	}
 
 	return newPlant;
@@ -459,11 +489,13 @@ float OBJ_Plant::getAge() {
 	return plantAge;
 }
 
-void OBJ_Plant::addToMerger(SOP_Branch* bMod) {
+void OBJ_Plant::addToMerger(OP_Node* pNode) {
 	// Get unique input path
-	UT_String path;
-	bMod->getFullPath(path);
-	merger->setNamedInput(path.hash(), bMod);
+	if (eco_merger) {
+		UT_String path;
+		pNode->getFullPath(path);
+		eco_merger->setNamedInput(path.hash(), pNode);
+	}
 }
 
 // Generate a prototype copy for editing in branch node

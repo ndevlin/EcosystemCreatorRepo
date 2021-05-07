@@ -341,6 +341,14 @@ SOP_Plant::cookMySop(OP_Context &context)
 	std::cout << "Num " + std::to_string(nOutputEntries()) << std::endl;
 	std::cout << "If " + std::to_string(hasAnyOutputNodes()) << std::endl;
 
+	UT_Array<OP_Node*> outs;
+	getOutputNodes(outs);
+	std::cout << "NumOut " + std::to_string(outs.size()) << std::endl;
+
+	for (OP_Node* o : outs) {
+
+	}
+
 	plantAge = ageVal;
 	////myDisplayNodePtr
 	//resetDisplayNodePtr
@@ -366,14 +374,14 @@ void SOP_Plant::setMerger(OP_Node* mergeNode) {
 void SOP_Plant::setOutput(OP_Node* outNode) {
 	output = outNode;
 
-	myDisplayNodePtr = output;
-	myRenderNodePtr = output;
-	myOutputNodes.append(output);
+	//myDisplayNodePtr = output;
+	//myRenderNodePtr = output;
+	//myOutputNodes.append(output);
 
 	if (merger) { output->connectToInputNode(*merger, 0, 0); }
 }
 
-void SOP_Plant::initPlant(OBJ_Plant * eco)
+void SOP_Plant::initPlant(OBJ_Plant * eco)//, OP_Node* branchNet)
 {
 	ecosystem = eco;
 	// TODO choose plantType based on climate OR through direct input from seeding
@@ -411,10 +419,15 @@ float SOP_Plant::getAge() {
 }
 
 /// Functions related to making this a network
-//int SOP_Plant::isNetwork() const
-//{
-//	return 1;
-//}
+int SOP_Plant::isNetwork() const
+{
+	return 1;
+}
+
+int SOP_Plant::isSubNetwork(bool includemanagementops) const
+{
+	return 1;
+}
 
 // Defining the children
 const char *
@@ -463,7 +476,9 @@ SOP_Plant::createAndGetOperatorTable()
     OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
 	// TODO maybe add Branch Module here since it's dependent on parent
 
-	table.addOperator(new OP_Operator("hdk_inout11_",
+	//table.createNode
+
+	/*table.addOperator(new OP_Operator("hdk_inout11_",
 		"In-Out 1-1",
 		SOP_CustomOutput::myConstructor,
 		SOP_CustomOutput::myTemplateList,
@@ -472,7 +487,7 @@ SOP_Plant::createAndGetOperatorTable()
 		10,
 		NULL,
 		OP_FLAG_UNORDERED)
-	);
+	);*/
     // Procedurally create some simple operator types for illustrative purposes.
     //table.addOperator(new sop_CustomVopOperator("hdk_inout11_", "In-Out 1-1"));
     //table.addOperator(new sop_CustomVopOperator("hdk_inout21_", "In-Out 2-1"));
@@ -499,12 +514,42 @@ BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
 	return plantType->copyPrototypeFromList(lambda, determ);
 }
 
+/// Provides the labels to appear on input and output buttons.
+const char*
+SOP_Plant::inputLabel(unsigned idx) const {
+	static UT_WorkBuffer theLabel;
+	int i = idx;
+
+	theLabel.strcpy("inputs" + std::to_string(i));
+	return theLabel.buffer();
+}
+
+const char*
+SOP_Plant::outputLabel(unsigned idx) const {
+	static UT_WorkBuffer theLabel;
+	int i = idx;
+
+	theLabel.strcpy("outToBranches" + std::to_string(i));
+	return theLabel.buffer();
+}
+
+/// Controls the number of input/output buttons visible on the node tile.
+unsigned
+SOP_Plant::getNumVisibleInputs() const {
+	return 0;
+}
+
+unsigned
+SOP_Plant::getNumVisibleOutputs() const {
+	return 1;
+}
+
 ///////////////////////////////////////////////////////
 //// SOP CUSTOM OUTPUT NODE ///////////////////////////
 
 static PRM_Name    sopCustomPlugInputs("inputs", "Inputs");
 static PRM_Name    sopCustomPlugInpName("inpplug#", "Input Name #");
-static PRM_Default sopCustomPlugInpDefault(0, "input1");
+static PRM_Default sopCustomPlugInpDefault(0, "input#");
 static PRM_Name    sopCustomPlugOutputs("outputs", "Outputs");
 static PRM_Name    sopCustomPlugOutName("outplug#", "Output Name #");
 static PRM_Default sopCustomPlugOutDefault(0, "output1");
@@ -533,6 +578,24 @@ SOP_CustomOutput::myTemplateList[]=
                  PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
 
     PRM_Template()              // List terminator
+
+	//PRM_DATA
+	//PRM_GEOMETRY
+	//PRM_KEY_VALUE_DICT
+	//PRM_GEODELTA
+	//PRM_STR_OP_REF_CHILD
+	/*enum PRM_DataType {
+	PRM_DATA_NONE		= 0x00000000,
+	PRM_DATA_GEOMETRY	= 0x00000001,
+	PRM_DATA_KEY_VALUE_DICT	= 0x00000002,
+	PRM_DATA_GEODELTA	= 0x00000004,
+    };*/
+	//PRM_PATH_GEO
+//PRM_API extern const PRM_Type	 PRM_TYPE_DATA;
+//PRM_API extern const PRM_Type	 PRM_TYPE_GEOMETRY;
+//PRM_API extern const PRM_Type	 PRM_TYPE_KEY_VALUE_DICT;
+//PRM_API extern const PRM_Type	 PRM_TYPE_GEODELTA
+//PRM_API extern const PRM_Type	 PRM_TYPE_GEO;
 };
 
 OP_Node* 
@@ -575,10 +638,12 @@ SOP_CustomOutput::runCreateScript() {
 	n = type_name.c_str()[type_name.length() - 2] - '0';
 	setInt(sopCustomPlugOutputs.getToken(), 0, t, n);
 
-	int i = 0;
-	plugname.sprintf("output%d", i + 1);
-	setStringInst(plugname.buffer(), CH_STRING_LITERAL,
-		sopCustomPlugOutName.getToken(), &i, 0, t);
+	for (int i = 0; i < n; i++)
+	{
+		plugname.sprintf("output%d", i + 1);
+		setStringInst(plugname.buffer(), CH_STRING_LITERAL,
+			sopCustomPlugOutName.getToken(), &i, 0, t);
+	}
 	
 	return true;
 }

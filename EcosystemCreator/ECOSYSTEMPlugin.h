@@ -24,7 +24,7 @@ public:
 	/// Copy's a prototype instance, used as a base for a new branch module
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
 	/// Add the corresponding node to the group output geometry
-	void                     addToMerger(SOP_Branch* bMod);
+	void                     addToMerger(OP_Node* pNode);
 	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
 
 	float                     getAge();
@@ -60,7 +60,7 @@ protected:
 
 private:
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
-	float AGE(fpreal t)     { return evalFloat("ecoAge", 0, t); }
+	float AGE(fpreal t)      { return evalFloat("ecoAge", 0, t); }
 	float EG1(fpreal t)      { return evalFloat("ecog1",  0, t); }
 	float EG2(fpreal t)      { return evalFloat("ecog2",  0, t); }
 
@@ -80,7 +80,7 @@ private:
 	//int numRootModules;
 	///
 
-	OP_Node* merger;
+	OP_Node* eco_merger;
 };
 } // End HDK_Sample namespace
 

@@ -37,7 +37,8 @@ public:
 
 	float                     getAge();
 
-	//int						  isNetwork() const override;
+	int						  isNetwork() const override;
+	int					      isSubNetwork(bool includemanagementops) const override;
 
 	/// We override these to specify that our child network type is VOPs.
     const char*               getChildType() const override;
@@ -56,8 +57,19 @@ public:
 
 	static const char*        theChildTableName;
 
+	/// Provides the labels to appear on input and output buttons.
+	// @{
+	const char *             inputLabel(unsigned idx) const override;
+	const char *             outputLabel(unsigned idx) const override;
+	// @}
+	/// Controls the number of input/output buttons visible on the node tile.
+	// @{
+	unsigned                 getNumVisibleInputs() const override;
+	unsigned                 getNumVisibleOutputs() const override;
+	// @}
+
 	//void setEcosystem(OBJ_Plant* eco);
-	void initPlant(OBJ_Plant* eco);
+	void initPlant(OBJ_Plant* eco);// , OP_Node* branchNet);
 	//virtual OP_ERROR		  cookMe(OP_Context &context);
 
 protected:
@@ -112,8 +124,9 @@ private:
 	//PrototypeSet* prototypeSet;
 
 	/// SINGLE PLANT
-	SOP_Branch* rootModule;
+	SOP_Branch* rootModule; // TODO make adaptable
 
+	OP_Node* branchNet;
 	OP_Node* merger;
 	OP_Node* output;
 };
