@@ -117,14 +117,7 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		newPlant->setOutput(outNode_sop);
 	}
 
-	//newPlant->setBypass(false);
 	newPlant->moveToGoodPosition();
-	//newPlant->triggerUIChanged(OP_UICHANGE_CONNECTIONS);
-
-	//newPlant->output
-	//newPlant->myOutputNodes.append(mergeNode);
-	//newPlant->getOutputSop(0, true);
-	//newPlant->setOutputForView(0);
 
 	//
 	//// Color for bark
