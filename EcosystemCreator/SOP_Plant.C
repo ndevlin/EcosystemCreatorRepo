@@ -303,7 +303,6 @@ SOP_Plant::~SOP_Plant() {}
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
-	//std::cout << "_PLANT" << std::endl;
 	fpreal now = context.getTime();
 	UT_Interrupt	*boss;
 	myCurrPoint = 0;
@@ -340,10 +339,10 @@ SOP_Plant::cookMySop(OP_Context &context)
 	{
 		boss = UTgetInterrupt();
 
-		if (rootModule) {
-			// TODO delete plant if age is over max age or under 0;
-			rootModule->setAge(getChangeInAge());
-		}
+		//if (rootModule) {
+		//	// TODO delete plant if age is over max age or under 0;
+		//	rootModule->setAge(getChangeInAge());
+		//}
 
 		// WARNING - does not update after you leave network until next cook
 		output = (SOP_Node*)getDisplayNodePtr();
@@ -364,7 +363,8 @@ SOP_Plant::cookMySop(OP_Context &context)
 		setFloat("plantAge", 0, now, plantAge);
 		enableParm("plantAge", false);
 
-		// TODO traverse down again to get vigor
+		// TODO traverse down again to get flux
+		// Maybe handle vigor here too
 
 		// Must tell the interrupt server that we've completed.
 		boss->opEnd();

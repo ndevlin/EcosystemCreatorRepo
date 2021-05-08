@@ -86,7 +86,7 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
-	//std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
+	// std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
 	fpreal now = context.getTime();
 	//flags().setTimeDep(false);
 
@@ -119,7 +119,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 			/// UPDATE AGE
 			// Can do this comparison now because Plant sets it's age AFTER the 
 			// child sop branch modules finish cooking. If that changes, fix here
-			//getChangeInAge()
+			if (plant) { // To be safe
+				setAge(plant->getChangeInAge());
+			}
 
 			/// CREATE AN AGENT FOR EACH BRANCH MODULE
 			//if (init_agent) {
@@ -193,6 +195,87 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 //////////////////// OUR FUNCTIONS FOR BRANCH SOP MANAGEMENT ///////////////////
 
+/// Important: updates all time-based values in all modules. Does all main calculations
+// TODO as we do this, propogate the vigor (from the last cook or precalculated) upwards
+void SOP_Branch::setAge(float changeInAge) {
+	if (prototype) {
+		float newAge = changeInAge + root->getAge();
+		bool mature = false;
+		bool decay = newAge < prototype->getMaturityAge() &&
+			root->getAge() >= prototype->getMaturityAge(); // Aka no longer mature
+
+		// Check that we have the right prototype age
+		if (newAge >= prototype->getMaturityAge()) {
+			// Double check that node is from the oldest prototype
+			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
+			mature = (root->getAge() < prototype->getMaturityAge());
+			// ^only if it was immature in the prior step - TODO change when adding vigor
+		}
+		else if (!BranchPrototype::isInRange(currAgeRange, newAge)) {
+			setRootByAge(newAge);
+		}
+
+		// Recalculate difference in age, since root may have changed
+		float ageDif = newAge - root->getAge(); /// Only use for these BNodes
+
+		// if mature, get terminal nodes to connect to with more modules
+		//std::vector<BNode*> terminalNodes = std::vector<BNode*>();
+		std::vector<std::shared_ptr<BNode>> terminalNodes = std::vector<std::shared_ptr<BNode>>();
+		//std::vector<SOP_Branch*> newModules = std::vector<SOP_Branch*>();
+
+		// Set the present age along the tree and adjusts current point calculations
+		// TODO calculate and use growth rate later
+		root->setAge(ageDif, currAgeRange, terminalNodes, mature, decay);
+
+		if (mature) { // - unneccessary double check
+			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
+				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
+
+				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
+				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
+
+				// TODO: set lambda and determ properly
+				//newModule->setBypass(false);
+				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
+				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
+				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
+				newModule->setParentModule(this, terminalNode);
+				newModule->setAge(0.0f); // TODO fix to be some difference
+				newModule->setInput(0, this);
+				plant->addToMerger(newModule);
+				newModule->moveToGoodPosition();
+				//newModule->getOutputNodes TODO check out that
+
+				// TODO maybe add specific rendering pipelines here
+				//OP_Node* colorNode = plant->createNode("color");
+
+				terminalNode->addModuleChild(newModule);
+				childModules.push_back(newModule);
+			}
+		}
+		else if (decay && !childModules.empty()) {
+			childModules.clear(); // actual destruction is handled in BNode
+		}
+
+		// TODO, go through new Modules and run optimize orientation steps
+		// Based on bounding volumes. maybe use commented-out newModules vector
+	}
+
+	// Recurse
+	//for (SOP_Branch* child : childModules) {
+	//	child->setAge(changeInAge);
+	//}
+
+	// Now add flux calculations here ^ while the recursion returns to the root
+	// Needs functioning bounding volumes first. Outline:
+	// have setAge return flux
+	//  - sum all intersecting volumes for each module
+	//  - use exponential decay on the negative of that summation to calculate exposure
+	//  - sum this flux at each branching point until we reach root
+
+	// Then vigor distribution. Be mindful of maxes and mins. Establish apical control variables
+}
+
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
 void SOP_Branch::setPlantAndPrototype(SOP_Plant* p, float lambda, float determ) {
 	plant = p;
@@ -236,86 +319,6 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 			prototype->getRootAtIdx(i)->recRotate(transform);
 		}
 	}
-}
-
-/// Important: updates all time-based values in all modules. Does all main calculations
-void SOP_Branch::setAge(float changeInAge) {
-	if (prototype) {
-		float newAge = changeInAge + root->getAge();
-		bool mature = false;
-		bool decay = newAge < prototype->getMaturityAge() &&
-			root->getAge() >= prototype->getMaturityAge();
-
-		// Check that we have the right prototype age
-		if (newAge >= prototype->getMaturityAge()) {
-			// Double check that node is from the oldest prototype
-			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
-			mature = (root->getAge() < prototype->getMaturityAge()); 
-			// ^only if it was immature in the prior step - TODO change when adding vigor
-		}
-		else if (!BranchPrototype::isInRange(currAgeRange, newAge)) {
-			setRootByAge(newAge);
-		}
-
-		// Recalculate difference in age, since root may have changed
-		float ageDif = newAge - root->getAge(); /// Only use within this SOP_Branch
-
-		// if mature, get terminal nodes to connect to with more modules
-		//std::vector<BNode*> terminalNodes = std::vector<BNode*>();
-		std::vector<std::shared_ptr<BNode>> terminalNodes = std::vector<std::shared_ptr<BNode>>();
-		//std::vector<SOP_Branch*> newModules = std::vector<SOP_Branch*>();
-
-		// Set the present age along the tree and adjusts current point calculations
-		// TODO calculate and use growth rate later
-		root->setAge(ageDif, currAgeRange, terminalNodes, mature, decay);
-
-		if (mature) { // - unneccessary double check
-			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
-				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
-
-				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
-				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
-
-				// TODO: set lambda and determ properly
-				//newModule->setBypass(false);
-				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
-				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
-				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
-				newModule->setParentModule(this, terminalNode);
-				newModule->setAge(0.0f);
-				newModule->setInput(0, this);
-				plant->addToMerger(newModule);
-				newModule->moveToGoodPosition();
-				//newModule->getOutputNodes TODO check out that
-
-				// TODO maybe add specific rendering pipelines here
-				//OP_Node* colorNode = plant->createNode("color");
-
-				terminalNode->addModuleChild(newModule);
-				childModules.push_back(newModule);
-			}
-		}
-		else if (decay && !childModules.empty()) {
-			childModules.clear(); // actual destruction is handled in BNode
-		}
-
-		// TODO, go through new Modules and run optimize orientation steps
-		// Based on bounding volumes. maybe use commented-out newModules vector
-	}
-
-	// Recurse
-	for (SOP_Branch* child : childModules) {
-		child->setAge(changeInAge);
-	}
-
-	// Now add flux calculations here ^ while the recursion returns to the root
-	// Needs functioning bounding volumes first. Outline:
-	// have setAge return flux
-	//  - sum all intersecting volumes for each module
-	//  - use exponential decay on the negative of that summation to calculate exposure
-	//  - sum this flux at each branching point until we reach root
-
-	// Then vigor distribution. Be mindful of maxes and mins. Establish apical control variables
 }
 
 /// Update the current agent rig with the transformations of nodes

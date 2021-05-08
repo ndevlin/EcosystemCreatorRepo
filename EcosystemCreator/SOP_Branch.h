@@ -37,14 +37,14 @@ public:
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
 
+	/// Important: updates all time-based values in all modules. Does all main calculations
+	void setAge(float changeInAge); // TODO should probaby split up
+
 	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
 	void setPlantAndPrototype(SOP_Plant* p, float lambda, float determ);
 
 	/// While setting the parent module, also alters current node data based on parent SOP_Branch
 	void setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode = nullptr);
-
-	/// Important: updates all time-based values in all modules. Does all main calculations
-	void setAge(float changeInAge); // TODO should probaby split up
 
 	/// Disconnect and delete this SOP_Branch
 	void destroySelf();
