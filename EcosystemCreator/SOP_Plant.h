@@ -3,22 +3,26 @@
 
 #include <SOP/SOP_Node.h>
 #include <SOP_Branch.h>
-#include "PlantType.h"
+#include "PlantSpecies.h"
 
 #include <CH/CH_Manager.h>
 
 namespace HDK_Sample {
-class OBJ_Plant;
+class OBJ_Ecosystem;
 
+/////// CUSTOM FILTER - for child nodes. At this point allows everything ///////
 class SOP_CustomSopOperatorFilter : public OP_OperatorFilter
 {
 public:
     bool allowOperatorAsChild(OP_Operator *op) override;
 };
 
+//////// THE PLANT NODE ITSELF - Essentially a network of SOP_Branches /////////
 class SOP_Plant : public SOP_Node
 {
 public:
+	// NODE CONSTRUCTION
+	/// Initialize plant sop and important children (merger and output)
     static OP_Node		*myConstructor(OP_Network*, const char *,
 							    OP_Operator *);
 
@@ -29,14 +33,8 @@ public:
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
 
-	/// Copy's a prototype instance, used as a base for a new branch module
-	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
-	/// Add the corresponding node to the group output geometry
-	void                     addToMerger(SOP_Branch* bMod);
-	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
-
-	float                     getAge();
-
+	// NETWORK FUNCTIONS: Override parent classes to allow for network functionality
+	/// Tells houdini that this node can contain children
 	int						  isNetwork() const override;
 	int					      isSubNetwork(bool includemanagementops) const override;
 
@@ -65,7 +63,20 @@ public:
 	unsigned                 getNumVisibleOutputs() const override;
 	// @}
 
-	void initPlant(OBJ_Plant* eco, float worldTime);
+	// PLANT SOP FUNCTIONS
+	/// Initialize the actual plant based on the environment (root SOP_Branch)
+	void initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> currSpecies,
+		float worldTime);
+
+	/// Generate a prototype copy to store as an editable tree in a SOP_Branch
+	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
+
+	/// Add the corresponding node as an input to the stored merge node
+	void                     addToMerger(SOP_Branch* bMod);
+	// TODO: confirm that a remove-from-merge function is unneded
+
+	/// Get the age of this plant - used in child SOP_Branches
+	float                    getAge();
 
 protected:
 
@@ -75,16 +86,15 @@ protected:
     /// Disable parameters according to other parameters.
     //virtual unsigned		 disableParms();
 
-
     /// Do the actual Plant SOP computing
 	virtual OP_ERROR		 cookMySop(OP_Context &context);
 	GU_DetailHandle			 cookMySopOutput(OP_Context &context,
 								int outputidx, SOP_Node* interests) override;
 
-	virtual bool			 cookDataForAnyOutput() const override
+	virtual bool			 cookDataForAnyOutput() const override // TODO confirm needed
 								{ return true; }
 
-	/// Inspired by custom vop example
+	/// Inspired by custom vop example - setting up this network's table
 	OP_OperatorTable *       createAndGetOperatorTable();
 
     /// This function is used to lookup local variables that you have
@@ -95,9 +105,14 @@ protected:
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
 				 { return evalVariableValue(v, i, thread); }
 
-	//void setPrototypeList();
+	// PLANT SOP FUNCTIONS
+	/// Stores a pointer to the root SOP_Branch, calls setPlantAndPrototype, sets its age
 	void setRootModule(SOP_Branch* node);
+
+	/// Stores the merge node that combines all branch geometry
 	void setMerger(OP_Node* mergeNode);
+
+	/// Stores the initial output of the network, sets as display/render node
 	void setOutput(SOP_Node* outNode);
 
 private:
@@ -111,67 +126,26 @@ private:
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
     /// Another use for local data is a cache to store expensive calculations."
-    int		myCurrPoint;
+    int	  myCurrPoint;
 
-	float plantAge;
-	float plantBirthday;
+	/// PLANT
+	float plantAge;		 /// The plant's age as compared to Ecosystem age and birthday
+	float plantBirthday; /// The age the ecosystem was when the plant spawned
 
-	std::shared_ptr<PlantType> plantType;
-	OBJ_Plant* ecosystem;
+	/// ENVIRONMENTAL CONTROL
+	OBJ_Ecosystem* ecosystem;					 /// The ecosystem this was spawned in
+	std::shared_ptr<PlantSpecies> plantSpecies;  /// The species info for this plant
 
-	/// SINGLE PLANT
-	SOP_Branch* rootModule; // TODO make adaptable
+	/// CHILD NODES:
+	/// The root Branch Module of this tree
+	SOP_Branch* rootModule; // TODO make adaptable (ditto to merger problem below)
 
-	OP_Node* branchNet;
-	OP_Node* merger;
-	SOP_Node* output;// TODO make adaptable - if suddenly null (or when UI Change Event), 
-					//replace with lowest non-branchModule node
+	/// Nodes to organize the network
+	OP_Node*  merger;  /// The merge node all Branch outputs are connected to
+	SOP_Node* output;  /// The current View/Display output of this node, controlled in Cook
+						// TODO - there is currently no backup if the user deletes merger
+								// Maybe add a backup function to create a new one if null
 };
-
-
-
-
-class SOP_CustomOutput : public SOP_Node
-{
-public:
-	static OP_Node		*myConstructor(OP_Network*, const char *,
-							    OP_Operator *);
-
-	/// Stores the description of the interface of the SOP in Houdini.
-	static PRM_Template		 myTemplateList[];
-
-	/// Overridden for some reason!
-	bool                     runCreateScript() override;
-
-	/// Provides the labels to appear on input and output buttons.
-	// @{
-	const char *             inputLabel(unsigned idx) const override;
-	const char *             outputLabel(unsigned idx) const override;
-	// @}
-	/// Controls the number of input/output buttons visible on the node tile.
-	// @{
-	unsigned                 getNumVisibleInputs() const override;
-	unsigned                 getNumVisibleOutputs() const override;
-	// @}
-
-protected:
-	SOP_CustomOutput(OP_Network *net, const char *name, OP_Operator *op);
-	~SOP_CustomOutput() override;
-
-	virtual OP_ERROR		 cookMySop(OP_Context &context) { return error(); }
-
-	/// Internal name of input, used by getCode
-	//void                     getInputNameSubclass(UT_String &name,
-	//								int idx) const override;
-	//int                      getInputFromNameSubclass(const UT_String &name) const override;
-
-private: 
-	static void              nodeEventHandler(OP_Node *caller, void *callee,
-											  OP_EventType type, void *data);
-
-	void                     handleParmChanged(int parm_index);
-};
-
 } // End HDK_Sample namespace
 
 #endif

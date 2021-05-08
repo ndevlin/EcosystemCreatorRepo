@@ -316,7 +316,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="BranchPrototype.cpp" />
-    <ClCompile Include="PlantType.cpp" />
+    <ClCompile Include="PlantSpecies.cpp" />
     <ClCompile Include="PrototypeAgentPtr.cpp" />
     <ClCompile Include="SOP_Branch.C" />
     <ClCompile Include="SOP_Plant.C" />
@@ -334,7 +334,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="BranchPrototype.h" />
-    <ClInclude Include="PlantType.h" />
+    <ClInclude Include="PlantSpecies.h" />
     <ClInclude Include="PrototypeAgentPtr.h" />
     <ClInclude Include="SOP_Branch.h" />
     <ClInclude Include="SOP_Plant.h" />

@@ -2,6 +2,7 @@
 #include "ECOSYSTEMPlugin.h"
 using namespace HDK_Sample;
 
+/// Custom filter for child node, allows all operator types right now
 bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 {
 	// TODO change to just SOP operators maybe
@@ -11,7 +12,7 @@ bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 
 // Declaring parameters here
 static PRM_Name	plantAgeName("plantAge", "Plant Age");
-static PRM_Name	      g1Name("g1",       "TropismDecrease");
+static PRM_Name	      g1Name("g1",       "Tropism Falloff"); /// TropismDecrease
 static PRM_Name	      g2Name("g2",       "TropismStrength");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
@@ -27,9 +28,9 @@ static PRM_Default	     g2Default(-0.2);
 static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
-////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-// Put them all together
+// Put all the parameters together for the UI
 PRM_Template
 SOP_Plant::myTemplateList[] = {
 	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault),
@@ -39,22 +40,23 @@ SOP_Plant::myTemplateList[] = {
 	PRM_Template()
 };
 
-// Here's how we define local variables for the OBJ.
+/// Variable funcs
+
+// Defining local variable(s)
 enum {
-	VAR_PT		// Point number of the star
-	//VAR_NPT		// Number of points in the star
+	VAR_PT		// Point number  - just used to tell when cooking
 };
 
 CH_LocalVariable
 SOP_Plant::myVariables[] = {
     { "PT",	VAR_PT, 0 },		// The table provides a mapping
-    //{ "NPT", VAR_NPT, 0 },		// from text string to integer token
-    { 0, 0, 0 },
+    { 0, 0, 0 },				// from text string to integer token
 };
 
+/// Table type for this sopnet
 const char *SOP_Plant::theChildTableName = SOP_TABLE_NAME;
 
-/// Still unsure if we'll need this
+/// May be of use later
 bool
 SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
 {
@@ -80,12 +82,17 @@ SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
     return SOP_Node::evalVariableValue(val, index, thread);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+//////////////////// HOUDINI FUNCTIONS FOR NODE CONTROL ////////////////////////
+
+/// Initialize plant sop and important children (merger and output)
 OP_Node *
 SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	SOP_Plant* newPlant = new SOP_Plant(net, name, op);
 
-	//// Create a merge node to merge all sop output geom
+	//// Create a merge node to merge all SOP_Branch output geom
 	OP_Node* mergeNode = newPlant->createNode("merge");
 
 	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
@@ -94,10 +101,6 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	if (mergeNode) {
 		mergeNode->moveToGoodPosition();
-		//mergeNode->setBypass(false);
-		//mergeNode->setDisplay(true);
-		//mergeNode->setRender(true);
-
 		newPlant->setMerger(mergeNode);
 	}
 
@@ -112,14 +115,14 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	if (outNode_sop) {
 		outNode_sop->moveToGoodPosition();
-		outNode_sop->setDisplay(true);
-		outNode_sop->setRender(true);
 
 		// Also handles connection to mergeNode aka newPlant->merger
 		newPlant->setOutput(outNode_sop);
 	}
 
 	newPlant->moveToGoodPosition();
+
+	// TODO move color handling to agent
 
 	//
 	//// Color for bark
@@ -275,12 +278,13 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: SOP_Node(net, name, op), plantType(nullptr), ecosystem(nullptr),
+	: SOP_Node(net, name, op), ecosystem(nullptr), plantSpecies(nullptr),
 	rootModule(nullptr), merger(nullptr)
 {
 	createAndGetOperatorTable();
 	myCurrPoint = -1;	// To prevent garbage values from being returned
-	plantAge = 0.0f; // currTime = plantAge + plantBirthday
+	
+	plantAge = 0.0f;
 	plantBirthday = 0.0f;
 	///setAllowBuildDependencies
 	///mySopFlags.setManagesDataIDs(true);
@@ -295,13 +299,7 @@ SOP_Plant::~SOP_Plant() {}
 //    return 0;
 //}
 
-/*OP_ERROR
-SOP_Plant::cookMe(OP_Context &context)
-{
-	return error();
-}*/
-
-
+/// Do the actual Plant SOP computing
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
@@ -316,7 +314,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 	float g1Val;
 	float g2Val;
 
-	//ageVal = AGE(now); //ecosystem->getAge();//
+	//ageVal = AGE(now);
 	g1Val  = G1(now);
 	g2Val  = G2(now);
 
@@ -347,8 +345,8 @@ SOP_Plant::cookMySop(OP_Context &context)
 			rootModule->setAge(ecosystem->getAge() - (plantAge + plantBirthday));
 		}
 
-		// TODO maybe cook output?
-		output = (SOP_Node*)getDisplayNodePtr(); // WARNING - does not update after you leave network until next cook
+		// WARNING - does not update after you leave network until next cook
+		output = (SOP_Node*)getDisplayNodePtr();
 		if (output) {
 			// TODO find a better way, "instance" it maybe
 			gdp->stashAll();
@@ -356,10 +354,13 @@ SOP_Plant::cookMySop(OP_Context &context)
 			gdp->destroyStashed();
 		}
 		// Could also prob use "notifyVarChange" to dirty children, but only the above so far has 
-		// resulted in the correct geometry
+		// resulted in the displaying the geometry for OBJ_Ecosystem
 
+		// Update plant age and display in a disabled parameter so the user can see
 		plantAge = ecosystem->getAge() - plantBirthday;
 		setFloat("plantAge", 0, now, plantAge);
+		enableParm("plantAge", false);
+
 		// Must tell the interrupt server that we've completed.
 		boss->opEnd();
 	}
@@ -370,6 +371,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 }
 
 
+/// Unsure if this is needed anymore
 GU_DetailHandle
 SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interests) {
 	if (output) {
@@ -380,37 +382,18 @@ SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interes
 	}
 }
 
-/// SETTERS
 
-void SOP_Plant::setRootModule(SOP_Branch* node) {
-	/// SINGLE PLANT
-	rootModule = node;
-	rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
-	rootModule->setAge(0.0f);
-}
+///////////////////// OUR FUNCTIONS FOR PLANT SOP MANAGEMENT ///////////////////
 
-void SOP_Plant::setMerger(OP_Node* mergeNode) {
-	merger = mergeNode;
-}
-
-void SOP_Plant::setOutput(SOP_Node* outNode) {
-	output = outNode;
-
-	//myDisplayNodePtr = output;
-	//myRenderNodePtr = output;
-	//myOutputNodes.append(output);
-
-	if (merger) { output->connectToInputNode(*merger, 0, 0); }
-}
-
-void SOP_Plant::initPlant(OBJ_Plant * eco, float worldTime)
+/// Initialize the actual plant based on the environment (the root SOP_Branch)
+void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> currSpecies,
+	float worldTime)
 {
 	ecosystem = eco;
 	plantBirthday = worldTime;
 
-	if (!ecosystem->plantTypes.empty()) {
-		// TODO choose plantType based on climate OR through direct input from seeding
-		plantType = ecosystem->plantTypes.at(0);
+	if (currSpecies) {
+		plantSpecies = currSpecies;
 
 		if (merger) {
 			// Create the root branch module
@@ -435,22 +418,86 @@ void SOP_Plant::initPlant(OBJ_Plant * eco, float worldTime)
 	}
 }
 
+/// Generate a prototype copy to store as an editable tree in a SOP_Branch
+BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
+	return plantSpecies->copyPrototypeFromList(lambda, determ);
+}
+
+/// Add the corresponding node as an input to the stored merge node
+void SOP_Plant::addToMerger(SOP_Branch* bMod) {
+	if (merger) {
+		// Get unique input path
+		UT_String path;
+		bMod->getFullPath(path);
+		merger->setNamedInput(path.hash(), bMod);
+	}
+}
+
+/// Get the age of this plant
 float SOP_Plant::getAge() {
 	return plantAge;
 }
 
-/// Functions related to making this a network
+/// Sets up the root SOP_Branch module
+void SOP_Plant::setRootModule(SOP_Branch* node) {
+	rootModule = node;
+
+	if (rootModule) {
+		rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
+		rootModule->setAge(0.0f);
+	}
+}
+
+/// Stores the merge node that combines all branch geometry
+void SOP_Plant::setMerger(OP_Node* mergeNode) {
+	merger = mergeNode;
+}
+
+/// Stores the initial output of the network, sets as display/render node
+void SOP_Plant::setOutput(SOP_Node* outNode) {
+	output = outNode;
+
+	//myDisplayNodePtr = output;
+	//myRenderNodePtr = output;
+	//myOutputNodes.append(output);
+
+	if (output) {
+		output->setDisplay(true);
+		output->setRender(true);
+
+		if (merger) { output->connectToInputNode(*merger, 0, 0); }
+	}
+}
+
+/////////////////// HOUDINI FUNCTIONS FOR NETWORK FEATURES /////////////////////
+
+/// Setting up the custom operator table for this network
+OP_OperatorTable *
+SOP_Plant::createAndGetOperatorTable()
+{
+	// Chain custom SOP operators onto the default SOP operator table
+	OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
+	// TODO maybe add Branch Module here since it's dependent on parent
+
+	// Notify observers of the operator table that it has been changed.
+	table.notifyUpdateTableSinksOfUpdate();
+
+	return &table;
+}
+
+/// Tells houdini this node can contain children
 int SOP_Plant::isNetwork() const
 {
 	return 1;
 }
 
+/// Tells houdini this is a subnetwork
 int SOP_Plant::isSubNetwork(bool includemanagementops) const
 {
 	return 1;
 }
 
-// Defining the children
+/// Defining the children types of the network
 const char *
 SOP_Plant::getChildType() const
 {
@@ -463,7 +510,7 @@ SOP_Plant::getChildTypeID() const
 	return SOP_OPTYPE_ID;
 }
 
-// Defining self
+/// Defining self
 const char *
 SOP_Plant::getOpType() const
 {
@@ -476,34 +523,7 @@ SOP_Plant::getOpTypeID() const
 	return SOP_OPTYPE_ID;
 }
 
-OP_OperatorTable *
-SOP_Plant::createAndGetOperatorTable()
-{
-    // We chain our custom VOP operators onto the default VOP operator table.
-    OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
-	// TODO maybe add Branch Module here since it's dependent on parent
-
-    // Notify observers of the operator table that it has been changed.
-    table.notifyUpdateTableSinksOfUpdate();
-
-    return &table;
-}
-///
-
-void SOP_Plant::addToMerger(SOP_Branch* bMod) {
-	// Get unique input path
-	UT_String path;
-	bMod->getFullPath(path);
-	merger->setNamedInput(path.hash(), bMod);
-}
-
-// Generate a prototype copy for editing in branch node
-BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
-	//return ecosystem->copyPrototypeFromList(lambda, determ);
-	return plantType->copyPrototypeFromList(lambda, determ);
-}
-
-/// Provides the labels to appear on input and output buttons.
+/// Provides the labels to appear on input buttons
 const char*
 SOP_Plant::inputLabel(unsigned idx) const {
 	static UT_WorkBuffer theLabel;
@@ -513,6 +533,7 @@ SOP_Plant::inputLabel(unsigned idx) const {
 	return theLabel.buffer();
 }
 
+/// Provides the labels to appear on output buttons
 const char*
 SOP_Plant::outputLabel(unsigned idx) const {
 	static UT_WorkBuffer theLabel;
@@ -522,177 +543,14 @@ SOP_Plant::outputLabel(unsigned idx) const {
 	return theLabel.buffer();
 }
 
-/// Controls the number of input/output buttons visible on the node tile.
+/// Controls the number of input buttons visible on the node tile
 unsigned
 SOP_Plant::getNumVisibleInputs() const {
 	return 0;
 }
 
+/// Controls the number of output buttons visible on the node tile
 unsigned
 SOP_Plant::getNumVisibleOutputs() const {
 	return 1;
-}
-
-///////////////////////////////////////////////////////
-//// SOP CUSTOM OUTPUT NODE ///////////////////////////
-
-static PRM_Name    sopCustomPlugInputs("inputs", "Inputs");
-static PRM_Name    sopCustomPlugInpName("inpplug#", "Input Name #");
-static PRM_Default sopCustomPlugInpDefault(0, "input#");
-static PRM_Name    sopCustomPlugOutputs("outputs", "Outputs");
-static PRM_Name    sopCustomPlugOutName("outplug#", "Output Name #");
-static PRM_Default sopCustomPlugOutDefault(0, "output1");
-
-static PRM_Template
-sopCustomPlugInpTemplate[] =
-{
-    PRM_Template(PRM_ALPHASTRING, 1, &sopCustomPlugInpName, &sopCustomPlugInpDefault),
-    PRM_Template() // List terminator
-};
-static PRM_Template
-sopCustomPlugOutTemplate[] =
-{
-    PRM_Template(PRM_ALPHASTRING, 1, &sopCustomPlugOutName, &sopCustomPlugOutDefault),
-    PRM_Template() // List terminator
-};
-
-/// Stores the description of the interface of the SOP in Houdini.
-PRM_Template
-SOP_CustomOutput::myTemplateList[]= 
-{
-    PRM_Template(PRM_MULTITYPE_LIST, sopCustomPlugInpTemplate, 0, &sopCustomPlugInputs,
-                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
-
-    PRM_Template(PRM_MULTITYPE_LIST, sopCustomPlugOutTemplate, 0, &sopCustomPlugOutputs,
-                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
-
-    PRM_Template()              // List terminator
-
-	//PRM_DATA
-	//PRM_GEOMETRY
-	//PRM_KEY_VALUE_DICT
-	//PRM_GEODELTA
-	//PRM_STR_OP_REF_CHILD
-	/*enum PRM_DataType {
-	PRM_DATA_NONE		= 0x00000000,
-	PRM_DATA_GEOMETRY	= 0x00000001,
-	PRM_DATA_KEY_VALUE_DICT	= 0x00000002,
-	PRM_DATA_GEODELTA	= 0x00000004,
-    };*/
-	//PRM_PATH_GEO
-//PRM_API extern const PRM_Type	 PRM_TYPE_DATA;
-//PRM_API extern const PRM_Type	 PRM_TYPE_GEOMETRY;
-//PRM_API extern const PRM_Type	 PRM_TYPE_KEY_VALUE_DICT;
-//PRM_API extern const PRM_Type	 PRM_TYPE_GEODELTA
-//PRM_API extern const PRM_Type	 PRM_TYPE_GEO;
-};
-
-OP_Node* 
-SOP_CustomOutput::myConstructor(OP_Network* net, const char* name, OP_Operator* op) {
-	return new SOP_CustomOutput(net, name, op);
-}
-
-SOP_CustomOutput::SOP_CustomOutput(OP_Network* net, const char* name, OP_Operator* op)
-	: SOP_Node(net, name, op)
-{
-	// Add our event handler.
-	addOpInterest(this, &SOP_CustomOutput::nodeEventHandler);
-}
-SOP_CustomOutput::~SOP_CustomOutput() {
-	removeOpInterest(this, &SOP_CustomOutput::nodeEventHandler);
-}
-
-/// Overridden for some reason!
-bool 
-SOP_CustomOutput::runCreateScript() {
-	if (!SOP_Node::runCreateScript()) { return false; }
-
-	fpreal        t = CHgetEvalTime();
-	UT_WorkBuffer plugname;
-
-	// TODO change
-	// For simplicity, we just initialize our number of inputs/outputs based
-	// upon our node type name.
-	const UT_StringHolder& type_name = getOperator()->getName();
-	int n = type_name.c_str()[type_name.length() - 3] - '0';
-	setInt(sopCustomPlugInputs.getToken(), 0, t, n);
-
-	for (int i = 0; i < n; i++)
-	{
-	    plugname.sprintf("input%d", i + 1);
-	    setStringInst(plugname.buffer(), CH_STRING_LITERAL,
-			sopCustomPlugInpName.getToken(), &i, 0, t);
-	}
-	
-	n = type_name.c_str()[type_name.length() - 2] - '0';
-	setInt(sopCustomPlugOutputs.getToken(), 0, t, n);
-
-	for (int i = 0; i < n; i++)
-	{
-		plugname.sprintf("output%d", i + 1);
-		setStringInst(plugname.buffer(), CH_STRING_LITERAL,
-			sopCustomPlugOutName.getToken(), &i, 0, t);
-	}
-	
-	return true;
-}
-
-/// Provides the labels to appear on input and output buttons.
-const char* 
-SOP_CustomOutput::inputLabel(unsigned idx) const {
-	static UT_WorkBuffer theLabel;
-	UT_String label;
-	int i = idx;
-	
-	// Evaluate our label from the corresponding parameter.
-	evalStringInst(sopCustomPlugInpName.getToken(), &i, label, 0, CHgetEvalTime());
-	
-	if (label.isstring()) { theLabel.strcpy(label); }
-	else { theLabel.strcpy("<unnamed>"); }
-	
-	return theLabel.buffer();
-}
-
-const char* 
-SOP_CustomOutput::outputLabel(unsigned idx) const {
-	static UT_WorkBuffer theLabel;
-	UT_String label;
-	int i = idx;
-
-	// Evaluate our label from the corresponding parameter.
-	evalStringInst(sopCustomPlugOutName.getToken(), &i, label, 0, CHgetEvalTime());
-
-	if (label.isstring()) { theLabel.strcpy(label); }
-	else { theLabel.strcpy("<unnamed>"); }
-
-	return theLabel.buffer();
-}
-
-/// Controls the number of input/output buttons visible on the node tile.
-unsigned 
-SOP_CustomOutput::getNumVisibleInputs() const {
-	return evalInt("inputs", 0, CHgetEvalTime());
-}
-
-unsigned 
-SOP_CustomOutput::getNumVisibleOutputs() const {
-	return evalInt("outputs", 0, CHgetEvalTime());
-}
-
-void 
-SOP_CustomOutput::nodeEventHandler(OP_Node *caller, void *callee,
-	OP_EventType type, void *data) {
-	switch (type)
-	{
-	    case OP_PARM_CHANGED:
-	        static_cast<SOP_CustomOutput*>(callee)->handleParmChanged((int)(intptr_t)data);
-	        break;
-	    default:
-	        break;
-	}
-}
-
-void 
-SOP_CustomOutput::handleParmChanged(int parm_index) {
-	triggerUIChanged(OP_UICHANGE_CONNECTIONS);
 }

@@ -4,23 +4,22 @@ using namespace HDK_Sample;
 
 int HDK_Sample::branchIDnum = 0;
 
+// Declaring parameters here
 PRM_Template
 SOP_Branch::myTemplateList[] = {
 	// No custom parameters at the post-prototype branch level (as of now)
 	PRM_Template()
 };
 
-// Here's how we define local variables for the SOP.
+// And the local variables for this SOP
 enum {
-	VAR_PT		// Point number of the star
-	//VAR_NPT		// Number of points in the star
+	VAR_PT		// Point number  - just used to tell when cooking
 };
 
 CH_LocalVariable
 SOP_Branch::myVariables[] = {
     { "PT",	VAR_PT, 0 },		// The table provides a mapping
-    //{ "NPT", VAR_NPT, 0 },		// from text string to integer token
-    { 0, 0, 0 },
+    { 0, 0, 0 },				// from text string to integer token
 };
 
 bool
@@ -37,9 +36,6 @@ SOP_Branch::evalVariableValue(fpreal &val, int index, int thread)
 		case VAR_PT:
 			val = (fpreal) myCurrPoint;
 			return true;
-		//case VAR_NPT:
-		//	val = (fpreal) myTotalPoints;
-		//	return true;
 		default:
 			/* do nothing */;
 		}
@@ -47,6 +43,10 @@ SOP_Branch::evalVariableValue(fpreal &val, int index, int thread)
     // Not one of our variables, must delegate to the base class.
     return SOP_Node::evalVariableValue(val, index, thread);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+//////////////////// HOUDINI FUNCTIONS FOR NODE CONTROL ////////////////////////
 
 OP_Node *
 SOP_Branch::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
@@ -70,97 +70,7 @@ SOP_Branch::disableParms()
     return 0;
 }
 
-/// Traverse all nodes in this module to create cylinder geometry
-void SOP_Branch::traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNode, int divisions) {
-	std::shared_ptr<BNode> parent = currNode->getParent();
-
-	UT_Vector3 start;
-	if (parent) { start = parent->getPos(); }
-	// TODO run setAge/calculatePos instead/first:
-	UT_Vector3 end = currNode->getPos();
-
-	std::vector<UT_Vector3> startCircle = std::vector<UT_Vector3>();
-	std::vector<UT_Vector3> endCircle = std::vector<UT_Vector3>();
-
-	// Calculate angle of geometry
-	UT_Matrix3 transform = UT_Matrix3(1.0);
-	if (parent) { transform.lookat(end, start); }
-	else {
-		// Or have circles flat by default
-		UT_Vector3 look;
-		look(0) = end(0);
-		look(1) = end(1) + 1.0;
-		look(2) = end(2);
-		transform.lookat(end, look);
-	}
-
-	// Create angled circle shapes
-	float ang = M_PI * 2 / divisions;
-	for (int i = 0; i < divisions; i++) {
-		// Get point along a circle
-		UT_Vector3 point;
-		point(0) = cos(ang * i);
-		point(1) = sin(ang * i);
-		point(2) = 0.0;
-		// rotate to match the branch
-		point = rowVecMult(point, transform);
-
-		if (parent) { startCircle.push_back(start + point * parent->getThickness()); }
-		endCircle.push_back(end + point * currNode->getThickness());
-	}
-
-	// Load points
-	if (parent) {
-		GU_PrimPoly* polyStart = GU_PrimPoly::build(gdp, divisions, GU_POLY_CLOSED);
-		GU_PrimPoly* polyEnd = GU_PrimPoly::build(gdp, divisions, GU_POLY_CLOSED);
-
-		for (int j = 0; j < divisions; j++) {
-			GA_Offset ptoffStart = polyStart->getPointOffset(j);
-			gdp->setPos3(ptoffStart, startCircle.at(j));
-
-			GA_Offset ptoffEnd = polyEnd->getPointOffset(j);
-			gdp->setPos3(ptoffEnd, endCircle.at(j));
-
-			// Set individual rectangle faces
-			GU_PrimPoly* polyRect = GU_PrimPoly::build(gdp, 4, GU_POLY_CLOSED);
-
-			for (int k = 0; k < 2; k++) {
-				GA_Offset ptoffRect = polyRect->getPointOffset(k);
-				gdp->setPos3(ptoffRect, startCircle.at((j + k) % divisions));
-			}
-
-			for (int k = 0; k < 2; k++) {
-				GA_Offset ptoffRect = polyRect->getPointOffset(k + 2);
-				gdp->setPos3(ptoffRect, endCircle.at((j + 1 - k) % divisions));
-			}
-		}
-	}
-	// Otherwise, just draw a circle // TODO only do this if bnode has no children (which shouldnt happen) or time = 0, etc
-	else {
-		GU_PrimPoly* poly = GU_PrimPoly::build(gdp, divisions, GU_POLY_CLOSED);
-		for (int j = 0; j < divisions; j++) {
-			GA_Offset ptoff = poly->getPointOffset(j);
-			gdp->setPos3(ptoff, endCircle.at(j));
-		}
-	}
-
-	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
-		traverseAndBuild(gdp, child, divisions);
-	}
-}
-
-void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
-	// Same effect
-	//moduleAgent->setLocalTransform(currNode->getLocalTransform(), currNode->getRigIndex());
-	UT_Matrix4 transform = currNode->getWorldTransform();
-	transform.prescale(currNode->getThickness(), currNode->getThickness(), currNode->getThickness());
-	moduleAgent->setWorldTransform(transform, currNode->getRigIndex());
-
-	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
-		setTransforms(child);
-	}
-}
-
+/// A debugging helper function that draws spheres at each BNode position
 void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 	GU_PrimSphereParms sphere(gdp);
 	sphere.xform.scale(0.15, 0.15, 0.15);
@@ -172,6 +82,7 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 	}
 }
 
+/// Does the actual work of the SOP Branch computing
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
@@ -259,7 +170,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 			gdp->getPrimitiveList().bumpDataId();/**/
 
 			// Testing ideal joint locations
-			//drawSphereAtEachNode(gdp, root);
+			///drawSphereAtEachNode(gdp, root);
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
@@ -274,6 +185,9 @@ SOP_Branch::cookMySop(OP_Context &context)
 	//std::cout << "__BRANCH" + std::to_string(branchID) + " end" << std::endl;
     return error();
 }
+
+
+//////////////////// OUR FUNCTIONS FOR BRANCH SOP MANAGEMENT ///////////////////
 
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
 void SOP_Branch::setPlantAndPrototype(SOP_Plant* p, float lambda, float determ) {
@@ -299,18 +213,9 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 		}
 
 		// Get starting orientation of model based off of parent branch
-		/*UT_Matrix3 transform = UT_Matrix3(1.0);
-		transform.rotate<UT_Axis3::XAXIS>(1.571);
-
-		UT_Matrix3 transformLook = UT_Matrix3(1.0);
-		transformLook.lookat(UT_Vector3(0.0f, 0.0f, 0.0f), -1.0f * connectingNode->getDir());
-		transform *= transformLook;*/
 		UT_Vector3 c = UT_Vector3();
 		UT_Matrix3 transform = UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
 			connectingNode->getDir(), c, 1);
-		//UT_Matrix3 transform = UT_Matrix3::dihedral(connectingNode->getDir(), 
-		//	UT_Vector3(0.0f, 1.0f, 0.0f), c, 1);
-		//transform.prescale(1.0f, -1.0f, 1.0f);
 		// TODO^ good starting point and will then get replaced by placement optimization
 
 		// Update the values for each prototype age
@@ -406,7 +311,22 @@ void SOP_Branch::setAge(float changeInAge) {
 	// Then vigor distribution. Be mindful of maxes and mins. Establish apical control variables
 }
 
-/// Swaps to whichever is the currently-aged prototype to reference
+/// Update the current agent rig with the transformations of nodes
+void SOP_Branch::setTransforms(std::shared_ptr<BNode> currNode) {
+	// Get the "world" transform of the current node - technically, with respect to Plant
+	UT_Matrix4 transform = currNode->getWorldTransform();
+	transform.prescale(currNode->getThickness(), currNode->getThickness(), currNode->getThickness());
+
+	// Update the rig joint to correspond with this node
+	moduleAgent->setWorldTransform(transform, currNode->getRigIndex());
+
+	// Repeat for all nodes in the BranchModule
+	for (std::shared_ptr<BNode> child : currNode->getChildren()) {
+		setTransforms(child);
+	}
+}
+
+/// Swaps tree beginning at "root" to be the appropriately aged prototype copy
 void SOP_Branch::setRootByAge(float time) {
 	if (prototype) {
 		int idx = prototype->getIdxAtTimestep(time);
@@ -415,8 +335,9 @@ void SOP_Branch::setRootByAge(float time) {
 	}
 }
 
+/// Disconnect and delete this SOP_Branch
 void SOP_Branch::destroySelf() {
-	// TODO Maybe also deleteData? And make sure to remove from merger
+	// TODO Maybe also deleteData?
 	disconnectAllInputs();
 	disconnectAllOutputs();
 	plant->destroyNode(this);

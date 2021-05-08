@@ -3,7 +3,7 @@
 using namespace HDK_Sample;
 
 ///
-/// Install the plant object into Houdini's object table
+/// Install the Ecosystem Object into Houdini's object table
 ///
 void
 newObjectOperator(OP_OperatorTable *table)
@@ -11,18 +11,18 @@ newObjectOperator(OP_OperatorTable *table)
 	table->addOperator(
 		new OP_Operator("EcoPlantNode",                  // Internal name
 						"EcosystemNode",                 // UI name
-	                    OBJ_Plant::myConstructor,	     // How to build the SOP
-	                    OBJ_Plant::buildTemplatePair(0), // My parameters
-	                    OBJ_Plant::theChildTableName,    // Table of child nodes
+	                    OBJ_Ecosystem::myConstructor,	     // How to build the SOP
+	                    OBJ_Ecosystem::buildTemplatePair(0), // My parameters
+	                    OBJ_Ecosystem::theChildTableName,    // Table of child nodes
 	                    0, 							     // Min # of sources
 						1,							     // Max # of sources TODO ?
-	                    OBJ_Plant::buildVariablePair(0), // Local variables
+	                    OBJ_Ecosystem::buildVariablePair(0), // Local variables
 						OP_FLAG_NETWORK)		         // Flag it as a network
 	);
 }
 
 ///
-/// Register the branch modules as a SOP
+/// Register the Branch Modules and Plant Nodes as a SOP (and sopnet)
 ///
 void
 newSopOperator(OP_OperatorTable *table)
@@ -32,7 +32,7 @@ newSopOperator(OP_OperatorTable *table)
 						"SinglePlant",						 // UI name
 						SOP_Plant::myConstructor,	         // How to build the SOP
 						SOP_Plant::myTemplateList,	         // My parameters
-						SOP_Plant::theChildTableName,
+						SOP_Plant::theChildTableName,		 // The table holding the network
 						0,				                     // Min # of sources
 						1,				                     // Max # of sources
 						SOP_Plant::myVariables,				 // Local variables
@@ -50,60 +50,55 @@ newSopOperator(OP_OperatorTable *table)
 						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
 	);
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declaring parameters here
-static PRM_Name	totalAgeName("totalAge", "Year (Time+Shift)");
-static PRM_Name	 ecoAgeName("ecoAge",    "Time Shift");
-static PRM_Name	  ecog1Name("ecog1",     "EcoTropismDecrease");
-static PRM_Name	  ecog2Name("ecog2",     "EcoTropismStrength");
+static PRM_Name	 totalAgeName("totalAge", "Year (Time+Shift)");
+static PRM_Name	timeShiftName("timeShift",    "Time Shift");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
 static PRM_Default totalAgeDefault(0, "0.0");
-static PRM_Default   ecoAgeDefault(0.0);
-static PRM_Default   ecog1Default(1.0);
-static PRM_Default   ecog2Default(-0.2);
+static PRM_Default timeShiftDefault(0.0);
 
 // Set up the ranges for the parameter inputs here
-static PRM_Range ecoAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
-static PRM_Range  ecog1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
-static PRM_Range  ecog2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
+static PRM_Range timeShiftRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 
-////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
-// Put them all together
+/// Template Funcs
+
+// Put all the parameters together for the UI
 PRM_Template
-OBJ_Plant::myTemplateList[] = {
-	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &totalAgeName, &totalAgeDefault),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecoAgeName,   &ecoAgeDefault, 0, &ecoAgeRange),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog1Name,     &ecog1Default, 0, &ecog1Range),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog2Name,     &ecog2Default, 0, &ecog2Range),
+OBJ_Ecosystem::myTemplateList[] = {
+	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &totalAgeName,  &totalAgeDefault),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &timeShiftName, &timeShiftDefault, 0, &timeShiftRange),
 	PRM_Template()
 };
 
 // Based from an HDK sample: merges the parameters of this object with those of its ancestors
 OP_TemplatePair *
-OBJ_Plant::buildTemplatePair(OP_TemplatePair *baseTemplate)
+OBJ_Ecosystem::buildTemplatePair(OP_TemplatePair *baseTemplate)
 {
 	OP_TemplatePair *ecosystem, *geo;
 	
 	// "Inherit" template pairs from geometry and beyond
 	geo = new OP_TemplatePair(OBJ_Geometry::getTemplateList(OBJ_PARMS_PLAIN), baseTemplate);
-	ecosystem = new OP_TemplatePair(OBJ_Plant::myTemplateList, geo);
+	ecosystem = new OP_TemplatePair(OBJ_Ecosystem::myTemplateList, geo);
 	return ecosystem;
 }
 
+/// Variable Funcs
 
-// Here's how we define local variables for the OBJ.
+// Defining local variable(s)
 enum {
-	VAR_PT,		// Point number of the star
-	VAR_NPT		// Number of points in the star
+	VAR_PT,		// Point number  - just used to tell when cooking in evalVariableValue (unused)
+	VAR_NPT		// Unused number of points variable
 };
 
 CH_LocalVariable
-OBJ_Plant::myVariables[] = {
+OBJ_Ecosystem::myVariables[] = {
     { "PT",	VAR_PT, 0 },		// The table provides a mapping
     { "NPT", VAR_NPT, 0 },		// from text string to integer token
     { 0, 0, 0 },
@@ -111,46 +106,24 @@ OBJ_Plant::myVariables[] = {
 
 // Trying to fit with the object hierarchy
 OP_VariablePair *
-OBJ_Plant::buildVariablePair(OP_VariablePair *baseVariable)
+OBJ_Ecosystem::buildVariablePair(OP_VariablePair *baseVariable)
 {
 	OP_VariablePair *ecosystem, *geo;
 
 	// "Inherit" template pairs from geometry and beyond
-	ecosystem = new OP_VariablePair(OBJ_Plant::myVariables, baseVariable);
+	ecosystem = new OP_VariablePair(OBJ_Ecosystem::myVariables, baseVariable);
 	geo = new OP_VariablePair(OBJ_Geometry::ourLocalVariables, ecosystem);
 	return geo;
 }
 
-/// Still unsure if we'll need this
-/*bool
-OBJ_Plant::evalVariableValue(fpreal &val, int index, int thread)
-{
-    // myCurrPoint will be negative when we're not cooking so only try to
-    // handle the local variables when we have a valid myCurrPoint index.
-    if (myCurrPoint >= 0)
-    {
-		// Note that "gdp" may be null here, so we do the safe thing
-		// and cache values we are interested in.
-		switch (index)
-		{
-		case VAR_PT:
-			val = (fpreal) myCurrPoint;
-			return true;
-		case VAR_NPT:
-			val = (fpreal) myTotalPoints;
-			return true;
-		default:
-			/* do nothing *//*;
-		}
-    }
-    // Not one of our variables, must delegate to the base class.
-    return OBJ_Geometry::evalVariableValue(val, index, thread);
-}*/
+////////////////////////////////////////////////////////////////////////////////
+
+//////////////////// HOUDINI FUNCTIONS FOR NODE CONTROL ////////////////////////
 
 OP_Node *
-OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
+OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
-	OBJ_Plant* newEco = new OBJ_Plant(net, name, op);
+	OBJ_Ecosystem* newEco = new OBJ_Ecosystem(net, name, op);
 
 	//// Create a merge node to merge all sop output geom
 	OP_Node* mergeNode = newEco->createNode("merge");
@@ -161,14 +134,13 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	if (mergeNode) { newEco->setMerger(mergeNode); }
 
-	/////// PLANTS
+	/////// PLANTS ////////
 	
 	// Initialize however many plant types you want, right now the constructor is the same for each
 	// TODO diversify
-	newEco->initPlantType(/* TODO add parameters*/);
+	newEco->initNewSpecies(/* TODO add parameters*/);
 
 	// Initialize plant from current ecosystem parameters
-	// TODO maybe select PlantType here
 	newEco->createPlant(/*add position maybe*/);
 
 	if (mergeNode) { mergeNode->moveToGoodPosition(); }
@@ -359,77 +331,49 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	return newEco;
 }
 
-OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: OBJ_Geometry(net, name, op), plantTypes(),
-	prototypeSet(nullptr), eco_merger(nullptr)
+OBJ_Ecosystem::OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op)
+	: OBJ_Geometry(net, name, op), speciesList(), eco_merger(nullptr)
 {
-    myCurrPoint = -1;	// To prevent garbage values from being returned
-	worldAge = 0.0f; // TODO getTime from net
+    myCurrPoint = -1; // To prevent garbage values from being returned
+	worldAge = 0.0f;
 }
 
-OBJ_Plant::~OBJ_Plant() {}
+OBJ_Ecosystem::~OBJ_Ecosystem() {}
 
 /// Unsure if we'll need this
 /*unsigned
-OBJ_Plant::disableParms()
+OBJ_Ecosystem::disableParms()
 {
     return 0;
 }*/
 
+/// Overridden to add better functionality to check (and cook) for time change
 bool
-OBJ_Plant::cook(OP_Context &context) {
+OBJ_Ecosystem::cook(OP_Context &context) {
 	// Allows for the ecosystem to regenerate even if time gets rewinded
 	if (dirtyForTimeChange(context.getTime())) { forceRecook(true); }
 
 	return OBJ_Geometry::cook(context);
 }
 
+/// Do the actual change-based computataions
 OP_ERROR
-OBJ_Plant::cookMyObj(OP_Context &context)
+OBJ_Ecosystem::cookMyObj(OP_Context &context)
 {
 	//std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
 
 	// TIME: Allow for the ecosystem age to also be impacted by the timeline, as well as the slider
-	// For some reason: only cooks on every NEW frame (however, plant does all, even backwards, probably due to interest)
+	// HOWEVER: only using this just cooks on every NEW frame. Fixed in cook() above
 	flags().setTimeDep(true);
-	flags().setTimeInterest(true); // doesn't make a difference
-	//dirtyForTimeChange(now);
-
-	// Get current plant-related values
-	//float ageVal;
-	//float g1Val;
-	//float g2Val;
+	flags().setTimeInterest(true); // doesn't make a difference? // childFlagChange ?
 
 	worldAge = AGE(now) + now;
-	//g1Val  = EG1(now);
-	//g2Val  = EG2(now);
-	std::cout << std::to_string(worldAge) << std::endl; // childFlagChange
-	//setFloat("totalAge", 0, now, worldAge);
-	//UT_StringRef strTotal = std::to_string(now);
+	
+	// Display the total age in a disabled parameter so the user can see
 	setString(std::to_string(worldAge), CH_StringMeaning::CH_STRING_LITERAL, 
 		"totalAge", 0, now);
 	enableParm("totalAge", false);
-
-	//BNode::updateG1(g1Val);
-	//BNode::updateG2(g2Val);
-	// TODO If we want to also add growth-coeff and thick-coeff as variables here?
-	// for thickness we would only need to rerun the traversal unless time also changes
-	// But this might be more of a prototype-designer sort of thing
-
-	/// SINGLE PLANT
-	//rootModule->setAge(ageVal - worldAge);
-	///
-	//float diff = ageVal - worldAge;
-
-	//for(int i = 0; i < numRootModules; i++)
-	//{ 
-	//	//rootModules.at(i)->setAge(diff);
-	//}
-	///
-
-	//worldAge = ageVal;
-
 
 	// Run geometry cook, needed to process primitive inputs
 	OP_ERROR    errorstatus;
@@ -440,78 +384,16 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	return errorstatus;
 }
 
-/// SETTERS
-void OBJ_Plant::initPlantType(/* TODO add parameters*/) {
-	// Decide on a path
-	UT_String path;
-	getFullPath(path);
-	plantTypes.push_back(std::make_shared<PlantType>(path));
-}
 
-void OBJ_Plant::setRootModule(SOP_Branch* node) {
-	/// SINGLE PLANT
-	//rootModule = node;
-	//rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
-	//rootModule->setAge(0.0f);
-	///
-	/*if (numRootModules < 1)
-	{
-		rootModules[0] = node;
-	}
-	else
-	{ 
-		rootModules.push_back(node);
-	}
-	node->setPlantAndPrototype(this, 0.0f, 0.0f);
-	node->setAge(0.0f);
-	numRootModules++;*/
-	///
-}
+///////////////////////////// PUBLIC CLASS FUNCTIONS ///////////////////////////
 
-void OBJ_Plant::setMerger(OP_Node* mergeNode) {
-	if (mergeNode) {
-		mergeNode->setDisplay(true);
-		mergeNode->setRender(true);
-		eco_merger = mergeNode;
-	}
-}
-
-SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
-	OP_Node* node = createNode("PlantNode");
-	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
-	else if (!node->runCreateScript())
-		std::cout << "Plant node constructor error" << std::endl;
-
-	// Create a subnetwork to store tree of branch modules
-	//OP_Node* branchNet = createNode("subnet");
-	//
-	//if (!branchNet) { std::cout << "SubNetwork is Nullptr" << std::endl; }
-	//else if (!branchNet->runCreateScript())
-	//	std::cout << "SubNetwork constructor error" << std::endl;
-
-	SOP_Plant* newPlant = (SOP_Plant*)node;
-	if (newPlant) {// && branchNet) {
-		// It is currently selecting a PlantType randomly in here.
-		// TODO input PlantType based on seeding
-		
-		//branchNet->connectToInputNode(*newPlant, 0, 0);
-		newPlant->initPlant(this, worldAge);
-
-		//addToMerger(branchNet);
-		addToMerger(newPlant);
-
-		node->moveToGoodPosition();
-		//branchNet->moveToGoodPosition();
-	}
-
-	return newPlant;
-}
-
-float OBJ_Plant::getAge() {
+/// Get the age of this ecosystem
+float OBJ_Ecosystem::getAge() {
 	return worldAge;
 }
 
-void OBJ_Plant::addToMerger(OP_Node* pNode) {
+/// Add the corresponding node to the group output geometry
+void OBJ_Ecosystem::addToMerger(OP_Node* pNode) {
 	// Get unique input path
 	if (eco_merger) {
 		UT_String path;
@@ -520,8 +402,55 @@ void OBJ_Plant::addToMerger(OP_Node* pNode) {
 	}
 }
 
-// Generate a prototype copy for editing in branch node
-BranchPrototype* OBJ_Plant::copyPrototypeFromList(float lambda, float determ) {
-	return prototypeSet->selectNewPrototype(lambda, determ);
+/// Initializes a plant node in this ecosystem using a randomly chosen species
+SOP_Plant* OBJ_Ecosystem::createPlant(/*add position maybe*/) {
+	return createPlant(chooseSpecies());
 }
 
+/// Initializes a plant node in this ecosystem with a pre-selected species (usually called in Seeding)
+SOP_Plant* OBJ_Ecosystem::createPlant(std::shared_ptr<PlantSpecies> currSpecies /*add position maybe*/) {
+	OP_Node* node = createNode("PlantNode");
+	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
+	else if (!node->runCreateScript())
+		std::cout << "Plant node constructor error" << std::endl;
+
+	SOP_Plant* newPlant = (SOP_Plant*)node;
+	if (newPlant) {
+		newPlant->initPlant(this, currSpecies, worldAge);
+		addToMerger(newPlant);
+
+		node->moveToGoodPosition();
+	}
+
+	return newPlant;
+}
+
+//////////////////////////// PROTECTED CLASS FUNCTIONS /////////////////////////
+
+/// Stores the merge node that combines all plant geometry, sets as display node
+void OBJ_Ecosystem::setMerger(OP_Node* mergeNode) {
+	if (mergeNode) {
+		mergeNode->setDisplay(true);
+		mergeNode->setRender(true);
+		eco_merger = mergeNode;
+	}
+}
+
+/// Initialized a new PlantSpecies
+void OBJ_Ecosystem::initNewSpecies(/* TODO add parameters*/) {
+	// Decide on a path
+	UT_String path;
+	getFullPath(path);
+	// TODO change - Currently just the default
+	speciesList.push_back(std::make_shared<PlantSpecies>(path));
+}
+
+/// Choose a likely plant species to spawn based on current spawn location's climate features
+std::shared_ptr<PlantSpecies> 
+OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) {
+	// TODO randomly choose plantSpecies based on climate
+	if (!speciesList.empty()) {
+		return speciesList.at(0);
+	}
+	return nullptr;
+}

@@ -140,7 +140,6 @@ std::shared_ptr<BNode> BranchPrototype::getRootAtIdx(int i)
 /// Get corresponding prototype agent definition at index
 GU_AgentDefinitionPtr BranchPrototype::getAgentDefAtIdx(int i)
 {
-	//return agentData.at(i).second;
 	return agentData.at(i);
 }
 

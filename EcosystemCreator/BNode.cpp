@@ -75,7 +75,7 @@ BNode::~BNode() {
 	}
 	for (SOP_Branch* connectedModule : connectedModules) {
 		connectedModule->destroySelf();
-		// TODO remove from parent list too
+		// TODO remove from parent list too - currently happens in SOP_Branch::setAge
 	}
 }
 
@@ -87,15 +87,12 @@ std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
 	for (std::shared_ptr<BNode> child : children) {
 		std::shared_ptr<BNode> copyChild = child->deepCopy(newNode);
 		newNode->addChild(copyChild);
-		//if (copyChild->getParent()) {
-		//	std::cout << "has parent in copy" << std::endl;
-		//}
 	}
 	return newNode;
 }
 
 /// SETTERS
-void BNode::setParent(std::shared_ptr<BNode> par) // TODO make ref to shared
+void BNode::setParent(std::shared_ptr<BNode> par)
 {
 	parent = par;
 }

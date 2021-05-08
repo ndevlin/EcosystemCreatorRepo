@@ -8,69 +8,71 @@
 namespace HDK_Sample {
 
 /// Stores the overall ecosystem and controls the time
-class OBJ_Plant : public OBJ_Geometry
+class OBJ_Ecosystem : public OBJ_Geometry
 {
 public:
     static OP_Node		*myConstructor(OP_Network*, const char *,
 							    OP_Operator *);
 
+	// User Interface:
+
     /// Stores the description of the interface of the SOP in Houdini.
     /// Each parm template refers to a parameter.
     static PRM_Template		 myTemplateList[];
-	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
+
+	/// Pairs the local interface of OBJ_Ecosystem with parent class OBJ_Geometry
+	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
 
+	/// Added better functionality to check (and cook) for time change
 	bool					 cook(OP_Context &context) override;
 
 	/// Confirms that node should be dirtied on time change
 	bool					 handleTimeChange(fpreal /* t */) override 
-								{ return true; } // Doesn't make a difference, test further with prints
+								{ return true; } // Doesn't seem to make a difference - TODO check
 
-	/// Copy's a prototype instance, used as a base for a new branch module
-	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
+	/// Get the age of this ecosystem - sum of the timeline and parm Time Shift
+	float                    getAge();
+
 	/// Add the corresponding node to the group output geometry
 	void                     addToMerger(OP_Node* pNode);
-	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
+	// TODO: confirm that a remove-from-merge function is unneded
 
-	float                     getAge();
-
-	void initPlantType(/* TODO add parameters*/);
-
-	std::vector<std::shared_ptr<PlantType>> plantTypes;
+	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
+	SOP_Plant* createPlant(/*add position maybe*/);
+	SOP_Plant* createPlant(std::shared_ptr<PlantSpecies> currSpecies /*add position maybe*/);
+			// TODO, seeding (in SOP_Plant)
 
 protected:
 
-	OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op);
-    virtual ~OBJ_Plant();
+	OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op);
+    virtual ~OBJ_Ecosystem();
 
     /// Disable parameters according to other parameters.
     //virtual unsigned		 disableParms();
 
-
-    /// Do the actual Branch SOP computing
+    /// Do the actual change-based computataions
     virtual OP_ERROR		 cookMyObj(OP_Context &context);
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
-    /*virtual bool evalVariableValue(fpreal &val, int index, int thread);
-    // Add virtual overload that delegates to the super class to avoid
-    // shadow warnings.
-    virtual bool evalVariableValue(UT_String &v, int i, int thread)
-				 { return evalVariableValue(v, i, thread); }*/
+    /* TODO maybe utilize evalVariableValue instead of all the pointers */
 
-	//void setPrototypeList();
-	void setRootModule(SOP_Branch* node);
+	/// Stores the merge node that combines all plant geometry, sets as display node
 	void setMerger(OP_Node* mergeNode);
-	SOP_Plant* createPlant(/*add position maybe*/);
+
+	/// Initialized a new PlantSpecies
+	void initNewSpecies(/* TODO add parameters*/); // TODO move to its own node
+
+	/// Choose a likely plant species to spawn based on current spawn location's climate features
+	std::shared_ptr<PlantSpecies> chooseSpecies(/* TODO use enviro parameters at curr location */);
 
 private:
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
-	float AGE(fpreal t)      { return evalFloat("ecoAge", 0, t); }
-	float EG1(fpreal t)      { return evalFloat("ecog1",  0, t); }
-	float EG2(fpreal t)      { return evalFloat("ecog2",  0, t); }
+	float AGE(fpreal t)      { return evalFloat("timeShift", 0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -80,13 +82,7 @@ private:
 
 	float worldAge;
 
-	PrototypeSet* prototypeSet;
-
-	/// SINGLE PLANT
-	/// SOP_Branch* rootModule;
-	//std::vector<SOP_Branch*> rootModules;
-	//int numRootModules;
-	///
+	std::vector<std::shared_ptr<PlantSpecies>> speciesList;
 
 	OP_Node* eco_merger;
 };
