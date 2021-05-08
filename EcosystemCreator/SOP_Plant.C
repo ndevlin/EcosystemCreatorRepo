@@ -342,7 +342,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 
 		if (rootModule) {
 			// TODO delete plant if age is over max age or under 0;
-			rootModule->setAge(ecosystem->getAge() - (plantAge + plantBirthday));
+			rootModule->setAge(getChangeInAge());
 		}
 
 		// WARNING - does not update after you leave network until next cook
@@ -350,6 +350,9 @@ SOP_Plant::cookMySop(OP_Context &context)
 		if (output) {
 			// TODO find a better way, "instance" it maybe
 			gdp->stashAll();
+			// WARNING - Plant cook encompasses all children cooks.
+			// If we somehow change this so that output is cooked after plantAge 
+			// is set, we must also change how SOP_Branches test for age change
 			gdp->merge(*output->getCookedGeo(context), nullptr, true, false, nullptr, true, GA_DATA_ID_CLONE);
 			gdp->destroyStashed();
 		}
@@ -360,6 +363,8 @@ SOP_Plant::cookMySop(OP_Context &context)
 		plantAge = ecosystem->getAge() - plantBirthday;
 		setFloat("plantAge", 0, now, plantAge);
 		enableParm("plantAge", false);
+
+		// TODO traverse down again to get vigor
 
 		// Must tell the interrupt server that we've completed.
 		boss->opEnd();
@@ -436,6 +441,11 @@ void SOP_Plant::addToMerger(SOP_Branch* bMod) {
 /// Get the age of this plant
 float SOP_Plant::getAge() {
 	return plantAge;
+}
+
+/// Get the change in age - only works mid-cook
+float SOP_Plant::getChangeInAge() {
+	return ecosystem->getAge() - (plantAge + plantBirthday);
 }
 
 /// Sets up the root SOP_Branch module

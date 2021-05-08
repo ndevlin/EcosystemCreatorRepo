@@ -77,6 +77,8 @@ public:
 
 	/// Get the age of this plant - used in child SOP_Branches
 	float                    getAge();
+	/// Get the change in age - only works mid-cook
+	float                    getChangeInAge();
 
 protected:
 

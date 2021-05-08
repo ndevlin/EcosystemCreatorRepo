@@ -116,8 +116,12 @@ SOP_Branch::cookMySop(OP_Context &context)
 		// Start the interrupt server
 		if (boss->opStart("Building ECOSYSTEM"))
 		{
-			// Traverse the node structure and make a cylinder for each branch
-			//traverseAndBuild(gdp, root, divisions); 
+			/// UPDATE AGE
+			// Can do this comparison now because Plant sets it's age AFTER the 
+			// child sop branch modules finish cooking. If that changes, fix here
+			//getChangeInAge()
+
+			/// CREATE AN AGENT FOR EACH BRANCH MODULE
 			//if (init_agent) {
 			init_agent = false;
 
@@ -237,21 +241,24 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 /// Important: updates all time-based values in all modules. Does all main calculations
 void SOP_Branch::setAge(float changeInAge) {
 	if (prototype) {
-		float ageVal = changeInAge + root->getAge();
+		float newAge = changeInAge + root->getAge();
 		bool mature = false;
-		bool decay = ageVal < prototype->getMaturityAge() &&
+		bool decay = newAge < prototype->getMaturityAge() &&
 			root->getAge() >= prototype->getMaturityAge();
 
 		// Check that we have the right prototype age
-		if (ageVal >= prototype->getMaturityAge()) {
+		if (newAge >= prototype->getMaturityAge()) {
 			// Double check that node is from the oldest prototype
 			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
 			mature = (root->getAge() < prototype->getMaturityAge()); 
 			// ^only if it was immature in the prior step - TODO change when adding vigor
 		}
-		else if (!BranchPrototype::isInRange(currAgeRange, ageVal)) {
-			setRootByAge(ageVal);
+		else if (!BranchPrototype::isInRange(currAgeRange, newAge)) {
+			setRootByAge(newAge);
 		}
+
+		// Recalculate difference in age, since root may have changed
+		float ageDif = newAge - root->getAge(); /// Only use within this SOP_Branch
 
 		// if mature, get terminal nodes to connect to with more modules
 		//std::vector<BNode*> terminalNodes = std::vector<BNode*>();
@@ -260,7 +267,7 @@ void SOP_Branch::setAge(float changeInAge) {
 
 		// Set the present age along the tree and adjusts current point calculations
 		// TODO calculate and use growth rate later
-		root->setAge(changeInAge, currAgeRange, terminalNodes, mature, decay);
+		root->setAge(ageDif, currAgeRange, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
