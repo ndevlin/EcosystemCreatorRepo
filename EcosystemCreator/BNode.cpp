@@ -107,7 +107,7 @@ void BNode::addModuleChild(SOP_Branch* child) {
 }
 
 // Adjust all new age-based calculations
-void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange, 
+void BNode::setAge(float changeInAge, 
 	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
 	age += changeInAge;
 
@@ -144,7 +144,7 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 
 	// Update children
 	for (std::shared_ptr<BNode> child : children) {
-		child->setAge(changeInAge, ageRange, terminalNodes, mature, decay);
+		child->setAge(changeInAge, terminalNodes, mature, decay);
 	}
 
 	if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {

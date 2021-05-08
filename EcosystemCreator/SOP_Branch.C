@@ -225,7 +225,7 @@ void SOP_Branch::setAge(float changeInAge) {
 
 		// Set the present age along the tree and adjusts current point calculations
 		// TODO calculate and use growth rate later
-		root->setAge(ageDif, currAgeRange, terminalNodes, mature, decay);
+		root->setAge(ageDif, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {

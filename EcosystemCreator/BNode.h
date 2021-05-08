@@ -40,9 +40,8 @@ public:
 	void addModuleChild(SOP_Branch* child);
 
 	// Adjust all new age-based calculations - Called from module
-	void setAge(float changeInAge, std::pair<float, float>& ageRange,
+	void setAge(float changeInAge, 
 		std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay);
-		//std::vector<BNode*>& terminalNodes, bool mature, bool decay);
 
 	// Getters for important variables
 	std::shared_ptr<BNode> getParent();
