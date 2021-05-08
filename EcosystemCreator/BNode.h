@@ -6,6 +6,7 @@
 #include <map>
 #include "vec.h"
 #include <SOP/SOP_Node.h>
+#include <UT/UT_ThreadedAlgorithm.h>
 
 namespace HDK_Sample {
 	class SOP_Branch;
@@ -40,8 +41,16 @@ public:
 	void addModuleChild(SOP_Branch* child);
 
 	// Adjust all new age-based calculations - Called from module
-	void setAge(float changeInAge, 
-		std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay);
+	bool shouldThread();
+
+	THREADED_METHOD5(BNode, shouldThread(), setAge,
+		float, changeInAge, std::shared_ptr<BNode>&, self,
+		std::vector<std::shared_ptr<BNode>>&, terminalNodes,
+		bool, mature, bool, decay)
+
+	void setAgePartial(float changeInAge, std::shared_ptr<BNode>& self, 
+		std::vector<std::shared_ptr<BNode>>& terminalNodes,
+		bool mature, bool decay, const UT_JobInfo &info);
 
 	// Getters for important variables
 	std::shared_ptr<BNode> getParent();
@@ -68,6 +77,12 @@ public:
 	void recThicknessUpdate(float radiusMultiplier);
 	void recLengthUpdate(float lengthMultiplier);
 	void recRotate(UT_Matrix3& rotation);
+
+protected:
+	// Setters for inside setAge threads, would have liked for this to be private
+	void saveAge(float a);
+	void setPos(UT_Vector3 pos);
+	void setThickness(float thick);
 
 private:
 	// Every node has up to one parent, but may have outgoing connections to

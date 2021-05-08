@@ -106,60 +106,92 @@ void BNode::addModuleChild(SOP_Branch* child) {
 	connectedModules.push_back(child);
 }
 
+bool BNode::shouldThread() {
+	return children.size() > 1;
+}
+
 // Adjust all new age-based calculations
-void BNode::setAge(float changeInAge, 
-	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
-	age += changeInAge;
+void BNode::setAgePartial(float changeInAge, std::shared_ptr<BNode>& self,
+	std::vector<std::shared_ptr<BNode>>& terminalNodes, 
+	bool mature, bool decay, const UT_JobInfo &info) {
+
+	self->saveAge(self->getAge() + changeInAge);///age += changeInAge;
 
 	// For roots of child modules
-	if (parent && isRoot()) { position = parent->getPos(); }
+	if (self->getParent() && self->isRoot()) { self->setPos(self->getParent()->getPos()); } ///position = parent->getPos(); }
 	
 	// For full branch-segments only, update length and position:
-	else if (parent) {
+	else if (self->getParent()) {
 		// TODO make this a more smooth curve, slow down over time
-		float branchLength = min(maxLength, age * 0.3f);
+		float branchLength = min(self->getMaxLength(), self->getAge() * 0.3f);
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
 		branchLength = branchLength * branchLength * (3 - 2 * branchLength);
 		branchLength = (max(min(branchLength, 1.0f), 0.5f) - 0.5f) * 2.0f * maxLength;*/
 
-		position = parent->getPos() + branchLength * unitDir;
+		///position = parent->getPos() + branchLength * unitDir;
 
 		// Calculate tropism offset using  static values
 		// TODO, just get a pointer to plant in BNode so that this isnt the same for all plants
-		float g1Val = pow(0.95f, age * BNode::getG1());   // Controls tropism decrease over time
+		float g1Val = pow(0.95f, self->getAge() * BNode::getG1());   // Controls tropism decrease over time
 		float g2Val = -BNode::getG2();                    // Controls tropism strength
 		UT_Vector3 gDir = UT_Vector3(0.0f, -1.0f, 0.0f);  // Gravity Direction
 
-		UT_Vector3 tOffset = (g1Val * g2Val * gDir) / max(age + g1Val, 0.05f);
+		UT_Vector3 tOffset = (g1Val * g2Val * gDir) / max(self->getAge() + g1Val, 0.05f);
 
-		position += tOffset * branchLength; // scaled it for the effect to be proportionate
+		///position += tOffset * branchLength; // scaled it for the effect to be proportionate
+		self->setPos(self->getParent()->getPos() + branchLength * (self->getDir() + tOffset));
 	}
 
 	// Branch thickness update:
-	thickness = max(0.015f, age * baseRadius * 0.4f);
+	///thickness = max(0.015f, age * baseRadius * 0.4f);
+	self->setThickness(max(0.015f, self->getAge() * self->getBaseRadius() * 0.4f));
 	// There's an age difference of 1 between terminal nodes and their children
 	// This is how I've decided to deal with it for now
-	if (parent && isRoot()) { thickness = parent->getThickness(); }
+	if (self->getParent() && self->isRoot()) { 
+		self->setThickness(self->getParent()->getThickness()); 
+	}
 	// TODO maybe only if this is the first of the terminal's childModule array
 
 	// Update children
-	for (std::shared_ptr<BNode> child : children) {
-		child->setAge(changeInAge, terminalNodes, mature, decay);
+	int i, n;
+	for (info.divideWork(self->getChildren().size(), i, n); i < n; i++) {//std::shared_ptr<BNode> child : children) {
+		self->getChildren().at(i)->setAge(changeInAge, self->getChildren().at(i), 
+			terminalNodes, mature, decay);
 	}
 
-	if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {
-		// TODO base addition on vigor
-		terminalNodes.push_back(shared_from_this());
-	}
-	// Clear/cull modules if it is not mature (rewinding of time) or TODO if vigor drops too low
-	else if (decay && !connectedModules.empty()) {
-		for (SOP_Branch* connectedMod : connectedModules) {
-			connectedMod->destroySelf();
+	{
+		UT_AutoJobInfoLock aLock(info); /// Lasts til out of scope
+
+		if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {
+			// TODO base addition on vigor
+			terminalNodes.push_back(shared_from_this()); // can do self instead
+			// Maybe don't lock and add child here (only lock for module creation?)
 		}
-		connectedModules.clear();
-		// TODO The parent array is cleared in SOP_Branch::setAge(). Maybe move that here
+		// Clear/cull modules if it is not mature (rewinding of time) or TODO if vigor drops too low
+		else if (decay && !connectedModules.empty()) {
+			for (SOP_Branch* connectedMod : connectedModules) {
+				connectedMod->destroySelf();
+			}
+			connectedModules.clear();
+			// TODO The parent array is cleared in SOP_Branch::setAge(). Maybe move that here
+		}
 	}
 }
+
+
+/// SETTERS
+void BNode::saveAge(float a) {
+	age = a;
+}
+
+void BNode::setPos(UT_Vector3 pos) {
+	position = pos;
+}
+
+void BNode::setThickness(float thick) {
+	thickness = thick;
+}
+
 
 /// GETTERS
 bool BNode::isRoot() const {
