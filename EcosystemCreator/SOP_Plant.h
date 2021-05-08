@@ -65,7 +65,7 @@ public:
 	unsigned                 getNumVisibleOutputs() const override;
 	// @}
 
-	void initPlant(OBJ_Plant* eco);
+	void initPlant(OBJ_Plant* eco, float worldTime);
 
 protected:
 
@@ -114,6 +114,7 @@ private:
     int		myCurrPoint;
 
 	float plantAge;
+	float plantBirthday;
 
 	std::shared_ptr<PlantType> plantType;
 	OBJ_Plant* ecosystem;

@@ -175,8 +175,9 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
+	//std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
 	fpreal now = context.getTime();
-	flags().setTimeDep(false);
+	//flags().setTimeDep(false);
 
 	// Cylinder variables
     UT_Interrupt	*boss;
@@ -270,6 +271,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 	triggerOutputChanged();
 
     myCurrPoint = -1;
+	//std::cout << "__BRANCH" + std::to_string(branchID) + " end" << std::endl;
     return error();
 }
 

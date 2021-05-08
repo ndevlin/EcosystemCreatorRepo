@@ -6,6 +6,8 @@
 #include <SOP_Plant.h>
 
 namespace HDK_Sample {
+
+/// Stores the overall ecosystem and controls the time
 class OBJ_Plant : public OBJ_Geometry
 {
 public:
@@ -20,6 +22,12 @@ public:
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
 	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
+
+	bool					 cook(OP_Context &context) override;
+
+	/// Confirms that node should be dirtied on time change
+	bool					 handleTimeChange(fpreal /* t */) override 
+								{ return true; } // Doesn't make a difference, test further with prints
 
 	/// Copy's a prototype instance, used as a base for a new branch module
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);

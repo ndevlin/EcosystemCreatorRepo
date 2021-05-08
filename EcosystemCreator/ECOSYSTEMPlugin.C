@@ -53,16 +53,18 @@ newSopOperator(OP_OperatorTable *table)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declaring parameters here
-static PRM_Name	ecoAgeName("ecoAge",    "EcoAge");
-static PRM_Name	 ecog1Name("ecog1",     "EcoTropismDecrease");
-static PRM_Name	 ecog2Name("ecog2",     "EcoTropismStrength");
+static PRM_Name	totalAgeName("totalAge", "Year (Time+Shift)");
+static PRM_Name	 ecoAgeName("ecoAge",    "Time Shift");
+static PRM_Name	  ecog1Name("ecog1",     "EcoTropismDecrease");
+static PRM_Name	  ecog2Name("ecog2",     "EcoTropismStrength");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
-static PRM_Default ecoAgeDefault(0.0);
-static PRM_Default  ecog1Default(1.0);
-static PRM_Default  ecog2Default(-0.2);
+static PRM_Default totalAgeDefault(0, "0.0");
+static PRM_Default   ecoAgeDefault(0.0);
+static PRM_Default   ecog1Default(1.0);
+static PRM_Default   ecog2Default(-0.2);
 
 // Set up the ranges for the parameter inputs here
 static PRM_Range ecoAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
@@ -74,9 +76,10 @@ static PRM_Range  ecog2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 // Put them all together
 PRM_Template
 OBJ_Plant::myTemplateList[] = {
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecoAgeName, &ecoAgeDefault, 0, &ecoAgeRange),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog1Name,   &ecog1Default, 0, &ecog1Range),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog2Name,   &ecog2Default, 0, &ecog2Range),
+	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &totalAgeName, &totalAgeDefault),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecoAgeName,   &ecoAgeDefault, 0, &ecoAgeRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog1Name,     &ecog1Default, 0, &ecog1Range),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &ecog2Name,     &ecog2Default, 0, &ecog2Range),
 	PRM_Template()
 };
 
@@ -373,24 +376,40 @@ OBJ_Plant::disableParms()
     return 0;
 }*/
 
+bool
+OBJ_Plant::cook(OP_Context &context) {
+	// Allows for the ecosystem to regenerate even if time gets rewinded
+	if (dirtyForTimeChange(context.getTime())) { forceRecook(true); }
+
+	return OBJ_Geometry::cook(context);
+}
+
 OP_ERROR
 OBJ_Plant::cookMyObj(OP_Context &context)
 {
-	std::cout << "ECO COOK START" << std::endl;
+	//std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
-	// For some reason: only cooks on every new frame (however, plant does)
+
+	// TIME: Allow for the ecosystem age to also be impacted by the timeline, as well as the slider
+	// For some reason: only cooks on every NEW frame (however, plant does all, even backwards, probably due to interest)
 	flags().setTimeDep(true);
-	flags().setTimeInterest(true);
-	std::cout << std::to_string(now) << std::endl;
+	flags().setTimeInterest(true); // doesn't make a difference
+	//dirtyForTimeChange(now);
 
 	// Get current plant-related values
-	float ageVal;
-	float g1Val;
-	float g2Val;
+	//float ageVal;
+	//float g1Val;
+	//float g2Val;
 
-	ageVal = AGE(now);
-	g1Val  = EG1(now);
-	g2Val  = EG2(now);
+	worldAge = AGE(now) + now;
+	//g1Val  = EG1(now);
+	//g2Val  = EG2(now);
+	std::cout << std::to_string(worldAge) << std::endl; // childFlagChange
+	//setFloat("totalAge", 0, now, worldAge);
+	//UT_StringRef strTotal = std::to_string(now);
+	setString(std::to_string(worldAge), CH_StringMeaning::CH_STRING_LITERAL, 
+		"totalAge", 0, now);
+	enableParm("totalAge", false);
 
 	//BNode::updateG1(g1Val);
 	//BNode::updateG2(g2Val);
@@ -401,7 +420,7 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	/// SINGLE PLANT
 	//rootModule->setAge(ageVal - worldAge);
 	///
-	float diff = ageVal - worldAge;
+	//float diff = ageVal - worldAge;
 
 	//for(int i = 0; i < numRootModules; i++)
 	//{ 
@@ -409,7 +428,7 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	//}
 	///
 
-	worldAge = ageVal;
+	//worldAge = ageVal;
 
 
 	// Run geometry cook, needed to process primitive inputs
@@ -417,7 +436,7 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	errorstatus = OBJ_Geometry::cookMyObj(context);
 
     myCurrPoint = -1;
-	std::cout << "ECO COOK END" << std::endl;
+	//std::cout << "ECO COOK END" << std::endl;
 	return errorstatus;
 }
 
@@ -476,7 +495,7 @@ SOP_Plant* OBJ_Plant::createPlant(/*add position maybe*/) {
 		// TODO input PlantType based on seeding
 		
 		//branchNet->connectToInputNode(*newPlant, 0, 0);
-		newPlant->initPlant(this);
+		newPlant->initPlant(this, worldAge);
 
 		//addToMerger(branchNet);
 		addToMerger(newPlant);

@@ -10,19 +10,20 @@ bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 
 
 // Declaring parameters here
-static PRM_Name	plantAgeName("plantAge", "PlantAge");
+static PRM_Name	plantAgeName("plantAge", "Plant Age");
 static PRM_Name	      g1Name("g1",       "TropismDecrease");
 static PRM_Name	      g2Name("g2",       "TropismStrength");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
-static PRM_Default plantAgeDefault(0.0);
+static PRM_Default plantAgeDefault(0, "0.0");
 static PRM_Default	     g1Default(1.0);
 static PRM_Default	     g2Default(-0.2);
 
 // Set up the ranges for the parameter inputs here
-static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
+// TODO change maximum based on PlantSpecies max age
+//static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
@@ -31,7 +32,8 @@ static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 // Put them all together
 PRM_Template
 SOP_Plant::myTemplateList[] = {
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault, 0, &plantAgeRange),
+	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault),
+	//PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault, 0, &plantAgeRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
 	PRM_Template()
@@ -278,7 +280,8 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 {
 	createAndGetOperatorTable();
 	myCurrPoint = -1;	// To prevent garbage values from being returned
-	plantAge = 0.0f;
+	plantAge = 0.0f; // currTime = plantAge + plantBirthday
+	plantBirthday = 0.0f;
 	///setAllowBuildDependencies
 	///mySopFlags.setManagesDataIDs(true);
 }
@@ -302,17 +305,18 @@ SOP_Plant::cookMe(OP_Context &context)
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
-	std::cout << "reached" << std::endl;
+	//std::cout << "_PLANT" << std::endl;
 	fpreal now = context.getTime();
+	UT_Interrupt	*boss;
 	myCurrPoint = 0;
-	flags().setTimeDep(false);
+	//flags().setTimeDep(false);
 
 	// Get current plant-related values
-	float ageVal;
+	//float ageVal;
 	float g1Val;
 	float g2Val;
 
-	ageVal = AGE(now);
+	//ageVal = AGE(now); //ecosystem->getAge();//
 	g1Val  = G1(now);
 	g2Val  = G2(now);
 
@@ -321,27 +325,48 @@ SOP_Plant::cookMySop(OP_Context &context)
 	// TODO If we want to also add growth-coeff and thick-coeff as variables here?
 	// for thickness we would only need to rerun the traversal unless time also changes
 	// But this might be more of a prototype-designer sort of thing
+
+	// Check if custom plant age has been adjusted
+	//float diff = ageVal - plantAge;
+	//if (abs(diff) > 0.00005f) {
+	//	plantAge = ageVal;
+	//	plantBirthday += diff;
+	//}
     
     // For ecosystem
 	if (ecosystem) {
 		addExtraInput(ecosystem, OP_INTEREST_DATA);
 	}
 
-	if (rootModule) {
-		rootModule->setAge(ageVal - plantAge);
-	}
+	if (error() < UT_ERROR_ABORT)
+	{
+		boss = UTgetInterrupt();
 
-	// TODO maybe cook output?
-	if (output) {
-		gdp->stashAll();
-		gdp->merge(*output->getCookedGeo(context), nullptr, true, false, nullptr, true, GA_DATA_ID_CLONE);
-		gdp->destroyStashed();
-	}
+		if (rootModule) {
+			// TODO delete plant if age is over max age or under 0;
+			rootModule->setAge(ecosystem->getAge() - (plantAge + plantBirthday));
+		}
 
-	plantAge = ageVal;
+		// TODO maybe cook output?
+		output = (SOP_Node*)getDisplayNodePtr(); // WARNING - does not update after you leave network until next cook
+		if (output) {
+			// TODO find a better way, "instance" it maybe
+			gdp->stashAll();
+			gdp->merge(*output->getCookedGeo(context), nullptr, true, false, nullptr, true, GA_DATA_ID_CLONE);
+			gdp->destroyStashed();
+		}
+		// Could also prob use "notifyVarChange" to dirty children, but only the above so far has 
+		// resulted in the correct geometry
+
+		plantAge = ecosystem->getAge() - plantBirthday;
+		setFloat("plantAge", 0, now, plantAge);
+		// Must tell the interrupt server that we've completed.
+		boss->opEnd();
+	}
+	triggerOutputChanged();
 
     myCurrPoint = -1;
-	return error();//errorstatus;
+	return error();
 }
 
 
@@ -378,12 +403,13 @@ void SOP_Plant::setOutput(SOP_Node* outNode) {
 	if (merger) { output->connectToInputNode(*merger, 0, 0); }
 }
 
-void SOP_Plant::initPlant(OBJ_Plant * eco)//, OP_Node* branchNet)
+void SOP_Plant::initPlant(OBJ_Plant * eco, float worldTime)
 {
 	ecosystem = eco;
-	// TODO choose plantType based on climate OR through direct input from seeding
-	//setPrototypeList();
+	plantBirthday = worldTime;
+
 	if (!ecosystem->plantTypes.empty()) {
+		// TODO choose plantType based on climate OR through direct input from seeding
 		plantType = ecosystem->plantTypes.at(0);
 
 		if (merger) {
