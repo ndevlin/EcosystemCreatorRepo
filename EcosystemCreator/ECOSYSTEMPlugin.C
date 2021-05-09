@@ -1,5 +1,8 @@
 #include <UT/UT_DSOVersion.h>
+#include <OP/OP_Director.h>
+#include <OP/OP_BundleList.h>
 #include "ECOSYSTEMPlugin.h"
+
 using namespace HDK_Sample;
 
 ///
@@ -50,17 +53,23 @@ newSopOperator(OP_OperatorTable *table)
 						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
 	);
 }
+
+//PRM_TYPE_DYNAMIC_PATH_LIST
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Declaring parameters here
 static PRM_Name	 totalAgeName("totalAge", "Year (Time+Shift)");
 static PRM_Name	timeShiftName("timeShift",    "Time Shift");
+
+static PRM_Name speciesListName("pspecies", "Plant Species List");
+static PRM_Name speciesPlugName("specItem#", "Plant Species #");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
 static PRM_Default totalAgeDefault(0, "0.0");
 static PRM_Default timeShiftDefault(0.0);
+static PRM_Default speciesDefault(0, "*");
 
 // Set up the ranges for the parameter inputs here
 static PRM_Range timeShiftRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
@@ -69,11 +78,23 @@ static PRM_Range timeShiftRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 
 /// Template Funcs
 
+static PRM_Template
+speciesItemTemplate[] =
+{
+    PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST,  1, &speciesPlugName,
+		&speciesDefault, 0, 0, 0, &PRM_SpareData::objPath),
+    PRM_Template() // List terminator
+};
+
 // Put all the parameters together for the UI
 PRM_Template
 OBJ_Ecosystem::myTemplateList[] = {
 	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &totalAgeName,  &totalAgeDefault),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &timeShiftName, &timeShiftDefault, 0, &timeShiftRange),
+	//PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST, 1, &speciesListName,
+	//	&speciesDefault, &speciesMenu, 0, 0, &PRM_SpareData::sopPath), // TODO fix spare
+	PRM_Template(PRM_MULTITYPE_LIST, speciesItemTemplate, 0, &speciesListName,
+                PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
 	PRM_Template()
 };
 
