@@ -208,10 +208,10 @@ void SOP_Branch::setAge(float changeInAge) {
 
 		// Check that we have the right prototype age
 		if (newAge >= prototype->getMaturityAge()) {
-			// Double check that node is from the oldest prototype
-			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
 			mature = (root->getAge() < prototype->getMaturityAge());
 			// ^only if it was immature in the prior step - TODO change when adding vigor
+			// Double check that node is from the oldest prototype
+			root = prototype->getRootAtIdx(prototype->getNumAges() - 1);
 		}
 		else if (!BranchPrototype::isInRange(currAgeRange, newAge)) {
 			setRootByAge(newAge);
@@ -230,6 +230,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		root->setAge(ageDif, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
+			float termNodeAge = newAge - prototype->getMaturityAge();
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
 
@@ -239,10 +240,10 @@ void SOP_Branch::setAge(float changeInAge) {
 				// TODO: set lambda and determ properly
 				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
 				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
-				newModule->setParentModule(this, terminalNode);
-				newModule->setAge(0.0f); // TODO fix to be some difference
+				newModule->setParentModule(this, termNodeAge, terminalNode);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
+				// Doesn't cook this round even with forceRecook :/
 
 				// TODO maybe add specific rendering pipelines here
 				//OP_Node* colorNode = plant->createNode("color");
@@ -284,7 +285,8 @@ void SOP_Branch::setPlantAndPrototype(SOP_Plant* p, float lambda, float determ) 
 }
 
 /// While setting the parent module, also alters current node data based on last branch
-void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode) {
+void SOP_Branch::setParentModule(SOP_Branch* parModule, float newAge,
+	std::shared_ptr<BNode> connectingNode) {
 	parentModule = parModule;
 	if (connectingNode && prototype) { 
 		// Get starting radius of model
@@ -306,8 +308,10 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 		// Update the values for each prototype age
 		for (int i = 0; i < prototype->getNumAges(); i++) {
 			prototype->getRootAtIdx(i)->setParent(connectingNode);
-			prototype->getRootAtIdx(i)->recTransformation(radiusMultiplier,
-				connectingNode->getMaxLength() * 0.8, transform);
+
+			float ageDif = newAge - prototype->getRootAtIdx(i)->getAge();
+			prototype->getRootAtIdx(i)->recTransformation(ageDif,
+				radiusMultiplier, connectingNode->getMaxLength() * 0.8, transform);
 		}
 	}
 }
@@ -341,5 +345,6 @@ void SOP_Branch::destroySelf() {
 	// TODO Maybe also deleteData?
 	disconnectAllInputs();
 	disconnectAllOutputs();
+	unloadData();
 	plant->destroyNode(this);
 }

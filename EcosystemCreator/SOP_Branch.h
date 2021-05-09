@@ -44,7 +44,8 @@ public:
 	void setPlantAndPrototype(SOP_Plant* p, float lambda, float determ);
 
 	/// While setting the parent module, also alters current node data based on parent SOP_Branch
-	void setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode = nullptr);
+	void setParentModule(SOP_Branch* parModule, float newAge,
+		std::shared_ptr<BNode> connectingNode = nullptr);
 
 	/// Disconnect and delete this SOP_Branch
 	void destroySelf();

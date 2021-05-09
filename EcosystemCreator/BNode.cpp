@@ -314,13 +314,15 @@ UT_Matrix4 BNode::getWorldTransform() {
 }*/
 
 /// More forms of updating
-void BNode::recTransformation(float radiusMultiplier, float lengthMultiplier,
-	UT_Matrix3& rotation) {
+void BNode::recTransformation(float ageDif, float radiusMultiplier, 
+	float lengthMultiplier, UT_Matrix3& rotation) {
+	age += ageDif;
 	baseRadius *= radiusMultiplier;
 	maxLength *= lengthMultiplier;
 	unitDir = rowVecMult(unitDir, rotation);
 
 	for (std::shared_ptr<BNode> child : children) { 
-		child->recTransformation(radiusMultiplier, lengthMultiplier, rotation);
+		child->recTransformation(ageDif, radiusMultiplier, 
+			lengthMultiplier, rotation);
 	}
 }
