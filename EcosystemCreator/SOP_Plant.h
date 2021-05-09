@@ -36,27 +36,27 @@ public:
 
 	// NETWORK FUNCTIONS: Override parent classes to allow for network functionality
 	/// Tells houdini that this node can contain children
-	int						  isNetwork() const override;
-	int					      isSubNetwork(bool includemanagementops) const override;
+	int						 isNetwork() const override;
+	int					     isSubNetwork(bool includemanagementops) const override;
 
 	/// We override these to specify that our child network type is VOPs.
-    const char*               getChildType() const override;
-    OP_OpTypeId               getChildTypeID() const override;
+    const char*              getChildType() const override;
+    OP_OpTypeId              getChildTypeID() const override;
 
-	const char*				  getOpType() const override;
-	OP_OpTypeId				  getOpTypeID() const override;
+	const char*				 getOpType() const override;
+	OP_OpTypeId				 getOpTypeID() const override;
 
 	/// Override this to provide custom behaviour for what is allowed in the
     /// tab menu.
-    OP_OperatorFilter*        getOperatorFilter() override
+    OP_OperatorFilter*       getOperatorFilter() override
                                     { return &myOperatorFilter; }
 
-	static const char*        theChildTableName;
+	static const char*       theChildTableName;
 
 	/// Provides the labels to appear on input and output buttons.
 	// @{
-	const char *             inputLabel(unsigned idx) const override;
-	const char *             outputLabel(unsigned idx) const override;
+	const char*              inputLabel(unsigned idx) const override;
+	const char*              outputLabel(unsigned idx) const override;
 	// @}
 	/// Controls the number of input/output buttons visible on the node tile.
 	// @{

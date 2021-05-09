@@ -23,7 +23,7 @@ newObjectOperator(OP_OperatorTable *table)
 						OP_FLAG_NETWORK)		             // Flag it as a network
 	);
 	
-	table->addOperator(
+	/*table->addOperator(
 		new OP_Operator("SingleSpecies",                 // Internal name
 						"Plant Species",				// UI name
 	                    PlantSpecies::myConstructor,	    // How to build the SOP
@@ -33,7 +33,7 @@ newObjectOperator(OP_OperatorTable *table)
 						1,							        // Max # of sources TODO ?
 	                    PlantSpecies::buildVariablePair(0), // Local variables
 						OP_FLAG_NETWORK)		            // Flag it as a network
-	);
+	);*/
 }
 
 ///
@@ -42,7 +42,7 @@ newObjectOperator(OP_OperatorTable *table)
 void
 newSopOperator(OP_OperatorTable *table)
 {
-	/*table->addOperator(
+	table->addOperator(
 		new OP_Operator("SingleSpecies",	                 // Internal name
 						"Plant Species",					 // UI name
 						PlantSpecies::myConstructor,	     // How to build the SOP
@@ -52,7 +52,7 @@ newSopOperator(OP_OperatorTable *table)
 						1,				                     // Max # of sources
 						PlantSpecies::myVariables,			 // Local variables
 						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
-	);*/
+	);
 
 	table->addOperator(
 		new OP_Operator("PlantNode",	                     // Internal name
@@ -493,7 +493,8 @@ void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
 	//speciesList.push_back(std::make_shared<PlantType>(path));
 
 
-	OP_Node* psNode = getParent()->createNode("SingleSpecies");
+	//OP_Node* psNode = getParent()->createNode("SingleSpecies");
+	OP_Node* psNode = createNode("SingleSpecies");
 	if (!psNode) { std::cout << "PlantSpecies Node is Nullptr" << std::endl; }
 	else if (!psNode->runCreateScript())
 		std::cout << "PlantSpecies constructor error" << std::endl;
