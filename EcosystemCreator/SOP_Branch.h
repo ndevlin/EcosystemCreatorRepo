@@ -15,10 +15,14 @@
 #include <OP/OP_Operator.h>
 #include <OP/OP_OperatorTable.h>
 
+#include <GU/GU_PrimSphere.h>
+
 #include <limits.h>
 
 namespace HDK_Sample {
 class OBJ_Plant;
+
+extern int branchIDnum;
 
 class SOP_Branch : public SOP_Node
 {
@@ -37,7 +41,7 @@ public:
 	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn, float rainfall, float temperature);
 
 	/// While setting the parent module, also alters current node data based on last branch
-	void setParentModule(SOP_Branch* parModule, BNode* connectingNode = nullptr);
+	void setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode = nullptr);
 
 	/// Important: updates all time-based values in all modules. Does all main calculations
 	void setAge(float changeInAge); // TODO should probaby split up
@@ -84,9 +88,11 @@ protected:
 
 private:
     /// Traverse all nodes in this module to create cylinder geometry
-	void traverseAndBuild(GU_Detail* gdp, BNode* currNode, int divisions); 
+	void traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNode, int divisions);
 							// TODO can go fully procedural by just adding parent pos as input 
 							// then wont need to copy over prototypes every time
+
+	void setTransforms(std::shared_ptr<BNode> currNode);
 
 	/// Swaps to whichever is the currently-aged prototype to reference
 	void setRootByAge(float time);
@@ -95,11 +101,21 @@ private:
     int		myCurrPoint;
     int		myTotalPoints;
 
+	int		branchID;
+
+	bool init_agent;
+	bool change_agent;
+
+	GU_Agent* moduleAgent;
+	GU_PrimPacked* packedPrim;
+
 	OBJ_Plant* plant;
 	BranchPrototype* prototype;
 
 	std::pair<float, float> currAgeRange;
-	BNode* root;
+
+	std::shared_ptr<BNode> root;
+
 	int rootIndex;
 
 	SOP_Branch* parentModule;

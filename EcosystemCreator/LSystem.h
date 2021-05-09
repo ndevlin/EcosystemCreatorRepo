@@ -27,7 +27,7 @@ public:
     const std::string& getIteration(unsigned int n);
 
     // Get nodes from running the turtle
-	BNode* process(unsigned int n);
+	std::shared_ptr<BNode> process(unsigned int n);
 
 protected:
     void reset();
@@ -49,7 +49,7 @@ protected:
         Turtle(const Turtle& t);
         Turtle& operator=(const Turtle& t);
 
-		void swapNode(BNode* newSegment);
+		void swapNode(std::shared_ptr<BNode> newSegment);
         void moveForward(float distance);
         void applyUpRot(float degrees);
         void applyLeftRot(float degrees);
@@ -59,7 +59,7 @@ protected:
         vec3 up;
         vec3 forward;
         vec3 left;
-		BNode* currSegment;
+		std::shared_ptr<BNode> currSegment;
     };
 };
 

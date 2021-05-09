@@ -36,6 +36,9 @@
     <ClCompile Include="SOP_Branch.C">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PrototypeAgentPtr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matrix.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SOP_Branch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PrototypeAgentPtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -46,6 +46,8 @@ static PRM_Name	      g1Name("g1",       "TropismDecrease");
 static PRM_Name	      g2Name("g2",       "TropismStrength");
 static PRM_Name rainfallName("rainfall", "Rainfall");
 static PRM_Name temperatureName("temperature", "Temperature");
+static PRM_Name randomnessName("randomness", "Randomness");
+
 
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
@@ -56,6 +58,7 @@ static PRM_Default	     g1Default(1.0);
 static PRM_Default	     g2Default(-0.2);
 static PRM_Default rainfallDefault(0.0);
 static PRM_Default temperatureDefault(0.0);
+static PRM_Default randomnessDefault(0.5);
 
 
 // Set up the ranges for the parameter inputs here
@@ -64,6 +67,7 @@ static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
 static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 static PRM_Range rainfallRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
 static PRM_Range temperatureRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
+static PRM_Range randomnessRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
 
 
 
@@ -77,6 +81,8 @@ OBJ_Plant::myTemplateList[] = {
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &rainfallName, &rainfallDefault, 0, &rainfallRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &temperatureName, &temperatureDefault, 0, &temperatureRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &randomnessName, &randomnessDefault, 0, &randomnessRange),
+
 	PRM_Template()
 };
 
@@ -204,13 +210,11 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!groundColor->runCreateScript())
 		std::cout << "Color constructor error" << std::endl;
 
-
-
-	int numPlants = 1;
-
 	int index = 0;
 
 	std::vector<OP_Node *> scatterNodes;
+
+	int numPlants = 10;
 
 	for (int i = 0; i < numPlants; i++)
 	{
@@ -258,6 +262,12 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		scatterNodes.push_back(scatter);
 		scatter->connectToInputNode(*mountain, 0, 1);
+
+		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
+
+		scatter->setFloat("npts", 0, 0.f, 10);
+
+
 		scatter->moveToGoodPosition();
 
 		// treeCopyToPoints to create instances of the tree for a forest
@@ -311,6 +321,8 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!leafCopyToPoints->runCreateScript())
 		std::cout << "Copy To Points constructor error" << std::endl;
 
+	leafCopyToPoints->moveToGoodPosition();
+
 	// Star will serve as a leaf for now
 	OP_Node* star = newPlant->createNode("star");
 	if (!star)
@@ -336,11 +348,6 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	leafColor->connectToInputNode(*star, 0, 0);
 	leafColor->moveToGoodPosition();
 
-
-	leafCopyToPoints->connectToInputNode(*allTreesMergeNode, 1, 0);
-
-	leafBarkMerge->connectToInputNode(*leafCopyToPoints, 0, 0);
-
 	leafBarkMerge->connectToInputNode(*barkColor, 1, 0);
 
 	leafCopyToPoints->moveToGoodPosition();
@@ -362,7 +369,7 @@ OBJ_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 OBJ_Plant::OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	: OBJ_Geometry(net, name, op), 
-	prototypeSet(nullptr), numRootModules(0), mainMerge(nullptr)
+	prototypeSet(nullptr), /*rootModule(nullptr),*/ numRootModules(0)
 {
     myCurrPoint = -1;	// To prevent garbage values from being returned
 	plantAge = 0.0f;
@@ -390,12 +397,14 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	float g2Val;
 	float rainfall;
 	float temperature;
+	float randomness;
 
 	ageVal = AGE(now);
 	g1Val  = G1(now);
 	g2Val  = G2(now);
 	rainfall = RAINFALL(now);
 	temperature = TEMPERATURE(now);
+	randomness = RANDOMNESS(now);
 
 	BNode::updateG1(g1Val);
 	BNode::updateG2(g2Val);
@@ -403,15 +412,20 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 	// for thickness we would only need to rerun the traversal unless time also changes
 	// But this might be more of a prototype-designer sort of thing
 
+	/// SINGLE PLANT
+	//rootModule->setAge(ageVal - plantAge);
+	///
 	float diff = ageVal - plantAge;
 
+	BranchPrototype::setRandomness(randomness);
 
 	for(int i = 0; i < numRootModules; i++)
 	{ 
-		rootModules[i]->rainfall = rainfall;
-		rootModules[i]->temperature = temperature;
-		rootModules[i]->setAge(diff);
+		rootModules.at(i)->setAge(diff);
+		rootModules.at(i)->temperature = temperature;
+		rootModules.at(i)->rainfall = rainfall;
 	}
+	///
 
 	plantAge = ageVal;
 
@@ -428,10 +442,18 @@ OBJ_Plant::cookMyObj(OP_Context &context)
 void OBJ_Plant::setPrototypeList() {
 	// TODO don't create one here. Take as an input and share across plant instances
 	// Dont allow plant loading without that
-	prototypeSet = new PrototypeSet();
+	// Decide on a path
+	UT_String path;
+	getFullPath(path);
+	prototypeSet = new PrototypeSet(path);
 }
 
 void OBJ_Plant::setRootModule(SOP_Branch* node) {
+	/// SINGLE PLANT
+	//rootModule = node;
+	//rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
+	//rootModule->setAge(0.0f);
+	///
 	if (numRootModules < 1)
 	{
 		rootModules[0] = node;
@@ -443,6 +465,7 @@ void OBJ_Plant::setRootModule(SOP_Branch* node) {
 	node->setPlantAndPrototype(this, 0.0f, 0.0f, numRootModules, 0.f, 0.f);
 	node->setAge(0.0f);
 	numRootModules++;
+	///
 }
 
 void OBJ_Plant::setMerger(OP_Node* mergeNode) {

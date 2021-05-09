@@ -3,6 +3,7 @@
 
 #include <OBJ/OBJ_Geometry.h>
 #include <SOP_Branch.h>
+#include "BranchPrototype.h"
 
 namespace HDK_Sample {
 class OBJ_Plant : public OBJ_Geometry
@@ -62,6 +63,7 @@ private:
 	float G2(fpreal t)      { return evalFloat("g2",       0, t); }
 	float RAINFALL(fpreal t) { return evalFloat("rainfall", 0, t); }
 	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
+	float RANDOMNESS(fpreal t) { return evalFloat("randomness", 0, t); }
 
 
 
@@ -75,8 +77,11 @@ private:
 
 	PrototypeSet* prototypeSet;
 
+	/// SINGLE PLANT
+	/// SOP_Branch* rootModule;
 	std::vector<SOP_Branch*> rootModules;
 	int numRootModules;
+	///
 
 	std::vector<OP_Node*> mergers;
 
