@@ -178,6 +178,17 @@ SOP_Branch::cookMySop(OP_Context &context)
 
 				// Testing ideal joint locations
 				///drawSphereAtEachNode(gdp, root);
+
+				// Way to get center of bounding sphere: (if agent collision doesn't work)
+				///UT_BoundingBox bbox;
+				///moduleAgent->getBounds(bbox);
+				///UT_Vector3 center = (bbox.minvec() + bbox.maxvec()) * 0.5f;
+				///float radius = (bbox.maxvec() - bbox.minvec()).length() * 0.5f;
+				///
+				///GU_PrimSphereParms sphere(gdp);
+				///sphere.xform.scale(radius, radius, radius);
+				///sphere.xform.translate(center);
+				///GU_PrimSphere::build(sphere, GEO_PRIMSPHERE);
 			}
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
