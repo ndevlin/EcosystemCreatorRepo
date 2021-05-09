@@ -65,9 +65,8 @@ public:
 	//UT_Matrix4 getLocalTransform(); /// No longer in use
 
 	// Recursive adjustments to core variables. Important in setting up child modules
-	void recThicknessUpdate(float radiusMultiplier);
-	void recLengthUpdate(float lengthMultiplier);
-	void recRotate(UT_Matrix3& rotation);
+	void recTransformation(float radiusMultiplier, float lengthMultiplier,
+		UT_Matrix3& rotation);
 
 private:
 	// Every node has up to one parent, but may have outgoing connections to

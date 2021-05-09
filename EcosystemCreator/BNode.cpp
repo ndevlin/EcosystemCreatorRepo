@@ -314,20 +314,13 @@ UT_Matrix4 BNode::getWorldTransform() {
 }*/
 
 /// More forms of updating
-void BNode::recThicknessUpdate(float radiusMultiplier) {
+void BNode::recTransformation(float radiusMultiplier, float lengthMultiplier,
+	UT_Matrix3& rotation) {
 	baseRadius *= radiusMultiplier;
-	for (std::shared_ptr<BNode> child : children) { child->recThicknessUpdate(radiusMultiplier); }
-}
-
-// experimental
-void BNode::recLengthUpdate(float lengthMultiplier) {
 	maxLength *= lengthMultiplier;
-	for (std::shared_ptr<BNode> child : children) { child->recLengthUpdate(lengthMultiplier); }
-}
-
-// experimental #2
-void BNode::recRotate(UT_Matrix3& rotation) {
 	unitDir = rowVecMult(unitDir, rotation);
-	//unitDir = colVecMult(rotation, unitDir);
-	for (std::shared_ptr<BNode> child : children) { child->recRotate(rotation); }
+
+	for (std::shared_ptr<BNode> child : children) { 
+		child->recTransformation(radiusMultiplier, lengthMultiplier, rotation);
+	}
 }

@@ -123,60 +123,62 @@ SOP_Branch::cookMySop(OP_Context &context)
 				setAge(plant->getChangeInAge());
 			}
 
-			/// CREATE AN AGENT FOR EACH BRANCH MODULE
-			//if (init_agent) {
-			init_agent = false;
+			if (prototype) {
+				/// CREATE AN AGENT FOR EACH BRANCH MODULE
+				//if (init_agent) {
+				init_agent = false;
 
-			GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
-			//gdp->destroyPrimitives(gdp->getPrimitiveRange());
-			GA_Offset ptoff = pointModule->getPointOffset(0);
-			UT_Vector3 pt;
-			pt(0) = 0.0;
-			pt(1) = 0.0;
-			pt(2) = 0.0;
-			gdp->setPos3(ptoff, pt);
+				GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
+				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
+				GA_Offset ptoff = pointModule->getPointOffset(0);
+				UT_Vector3 pt;
+				pt(0) = 0.0;
+				pt(1) = 0.0;
+				pt(2) = 0.0;
+				gdp->setPos3(ptoff, pt);
 
-			// TEST
-			//gdp->destroyPrimitives(gdp->getPrimitiveRange());
-			//GA_Offset ptoff2;
-			//for (GA_Offset ptoff3 : gdp->getPointRange()) {
-			//	ptoff2 = ptoff3;
-			//	break;
-			//}
+				// TEST
+				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
+				//GA_Offset ptoff2;
+				//for (GA_Offset ptoff3 : gdp->getPointRange()) {
+				//	ptoff2 = ptoff3;
+				//	break;
+				//}
 
-			packedPrim = GU_Agent::agent(*gdp, ptoff);//2);
-			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
-			gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
-			gdp->getPrimitiveList().bumpDataId();
+				packedPrim = GU_Agent::agent(*gdp, ptoff);//2);
+				gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
+				gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
+				gdp->getPrimitiveList().bumpDataId();
 
-			// Adding a name
-			GA_RWHandleS name_attr(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE, "name", 1));
+				// Adding a name
+				GA_RWHandleS name_attr(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE, "name", 1));
 
-			moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-			//}
-			//if (change_agent) {
-			change_agent = false;
-			int currIdx = prototype->getIdxAtTimestep(root->getAge());
-			GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
-			moduleAgent->setDefinition(packedPrim, ptrTemp);
+				moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
+				//}
+				//if (change_agent) {
+				change_agent = false;
+				int currIdx = prototype->getIdxAtTimestep(root->getAge());
+				GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
+				moduleAgent->setDefinition(packedPrim, ptrTemp);
 
-			GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
-			moduleAgent->setCurrentLayer(packedPrim, currLayer);
-			
-			setTransforms(root);
+				GU_AgentLayerConstPtr currLayer = ptrTemp->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
+				moduleAgent->setCurrentLayer(packedPrim, currLayer);
 
-			// Finishing name
-			UT_WorkBuffer currName;
-			UT_String agentName;
-			currName.sprintf(("agentname_" + std::to_string(branchID)).c_str(), 
-				agentName.buffer(), 0);
-			name_attr.set(packedPrim->getMapOffset(), currName.buffer());
+				setTransforms(root);
 
-			//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-			gdp->getPrimitiveList().bumpDataId();/**/
+				// Finishing name
+				UT_WorkBuffer currName;
+				UT_String agentName;
+				currName.sprintf(("agentname_" + std::to_string(branchID)).c_str(),
+					agentName.buffer(), 0);
+				name_attr.set(packedPrim->getMapOffset(), currName.buffer());
 
-			// Testing ideal joint locations
-			///drawSphereAtEachNode(gdp, root);
+				//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
+				gdp->getPrimitiveList().bumpDataId();/**/
+
+				// Testing ideal joint locations
+				///drawSphereAtEachNode(gdp, root);
+			}
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
 			select(GU_SPrimitive);
@@ -235,16 +237,12 @@ void SOP_Branch::setAge(float changeInAge) {
 				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
 
 				// TODO: set lambda and determ properly
-				//newModule->setBypass(false);
 				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
 				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
-				//newModule->setPlantAndPrototype(plant, 0.0f, 0.0f);
 				newModule->setParentModule(this, terminalNode);
 				newModule->setAge(0.0f); // TODO fix to be some difference
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
-				newModule->moveToGoodPosition();
-				//newModule->getOutputNodes TODO check out that
 
 				// TODO maybe add specific rendering pipelines here
 				//OP_Node* colorNode = plant->createNode("color");
@@ -288,12 +286,12 @@ void SOP_Branch::setPlantAndPrototype(SOP_Plant* p, float lambda, float determ) 
 /// While setting the parent module, also alters current node data based on last branch
 void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode) {
 	parentModule = parModule;
-	if (connectingNode) { 
+	if (connectingNode && prototype) { 
 		// Get starting radius of model
 		bool adjustRadius = connectingNode->getBaseRadius() !=
 			prototype->getRootAtIdx(0)->getBaseRadius();
 
-		float radiusMultiplier;
+		float radiusMultiplier = 1.0f;
 		if (adjustRadius) {
 			radiusMultiplier = connectingNode->getBaseRadius() / 
 				prototype->getRootAtIdx(0)->getBaseRadius();
@@ -308,15 +306,8 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> c
 		// Update the values for each prototype age
 		for (int i = 0; i < prototype->getNumAges(); i++) {
 			prototype->getRootAtIdx(i)->setParent(connectingNode);
-
-			if (adjustRadius) {
-				prototype->getRootAtIdx(i)->recThicknessUpdate(radiusMultiplier);
-			}
-			// experimental
-			prototype->getRootAtIdx(i)->recLengthUpdate(connectingNode->getMaxLength() * 0.8);
-
-			// experimental#2
-			prototype->getRootAtIdx(i)->recRotate(transform);
+			prototype->getRootAtIdx(i)->recTransformation(radiusMultiplier,
+				connectingNode->getMaxLength() * 0.8, transform);
 		}
 	}
 }
