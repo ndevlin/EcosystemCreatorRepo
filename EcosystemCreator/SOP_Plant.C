@@ -360,6 +360,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 
 		// Update plant age and display in a disabled parameter so the user can see
 		plantAge = ecosystem->getAge() - plantBirthday;
+		if (ecosystem->getAge() < plantBirthday) { plantAge = 0.0f; } // TODO delete plant instead
 		setFloat("plantAge", 0, now, plantAge);
 		enableParm("plantAge", false);
 
@@ -445,6 +446,12 @@ float SOP_Plant::getAge() {
 
 /// Get the change in age - only works mid-cook
 float SOP_Plant::getChangeInAge() {
+	// TODO When implementing seeding, should delete plant if ecosystem age < birthday
+	// But for now  for consistency with random distribution
+	if (ecosystem->getAge() < plantBirthday) {
+		return plantBirthday - plantAge;
+	}
+
 	return ecosystem->getAge() - (plantAge + plantBirthday);
 }
 
