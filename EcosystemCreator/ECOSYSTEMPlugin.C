@@ -12,15 +12,27 @@ void
 newObjectOperator(OP_OperatorTable *table)
 {
 	table->addOperator(
-		new OP_Operator("EcoPlantNode",                  // Internal name
-						"EcosystemNode",                 // UI name
+		new OP_Operator("EcosystemNode",                  // Internal name
+						"Ecosystem Geo",                 // UI name
 	                    OBJ_Ecosystem::myConstructor,	     // How to build the SOP
 	                    OBJ_Ecosystem::buildTemplatePair(0), // My parameters
 	                    OBJ_Ecosystem::theChildTableName,    // Table of child nodes
-	                    0, 							     // Min # of sources
-						1,							     // Max # of sources TODO ?
+	                    0, 							         // Min # of sources
+						1,							         // Max # of sources TODO ?
 	                    OBJ_Ecosystem::buildVariablePair(0), // Local variables
-						OP_FLAG_NETWORK)		         // Flag it as a network
+						OP_FLAG_NETWORK)		             // Flag it as a network
+	);
+	
+	table->addOperator(
+		new OP_Operator("SingleSpecies",                 // Internal name
+						"Plant Species",				// UI name
+	                    PlantSpecies::myConstructor,	    // How to build the SOP
+	                    PlantSpecies::buildTemplatePair(0), // My parameters
+	                    PlantSpecies::theChildTableName,    // Table of child nodes
+	                    0, 							        // Min # of sources
+						1,							        // Max # of sources TODO ?
+	                    PlantSpecies::buildVariablePair(0), // Local variables
+						OP_FLAG_NETWORK)		            // Flag it as a network
 	);
 }
 
@@ -30,9 +42,21 @@ newObjectOperator(OP_OperatorTable *table)
 void
 newSopOperator(OP_OperatorTable *table)
 {
+	/*table->addOperator(
+		new OP_Operator("SingleSpecies",	                 // Internal name
+						"Plant Species",					 // UI name
+						PlantSpecies::myConstructor,	     // How to build the SOP
+						PlantSpecies::myTemplateList,	     // My parameters
+						PlantSpecies::theChildTableName,	 // The table holding the network
+						0,				                     // Min # of sources
+						1,				                     // Max # of sources
+						PlantSpecies::myVariables,			 // Local variables
+						OP_FLAG_NETWORK & OP_FLAG_GENERATOR) // Flag it as generator & network
+	);*/
+
 	table->addOperator(
 		new OP_Operator("PlantNode",	                     // Internal name
-						"SinglePlant",						 // UI name
+						"Plant Sop",						 // UI name
 						SOP_Plant::myConstructor,	         // How to build the SOP
 						SOP_Plant::myTemplateList,	         // My parameters
 						SOP_Plant::theChildTableName,		 // The table holding the network
@@ -44,7 +68,7 @@ newSopOperator(OP_OperatorTable *table)
 
 	table->addOperator(
 		new OP_Operator("BranchModule",	                     // Internal name
-						"MyBranchModule",			         // UI name
+						"Branch Sop",						 // UI name
 						SOP_Branch::myConstructor,	         // How to build the SOP
 						SOP_Branch::myTemplateList,	         // My parameters
 						0,				                     // Min # of sources
@@ -81,8 +105,10 @@ static PRM_Range timeShiftRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
 static PRM_Template
 speciesItemTemplate[] =
 {
-    PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST,  1, &speciesPlugName,
+    PRM_Template(PRM_STRING, PRM_TYPE_DYNAMIC_PATH,  1, &speciesPlugName,
 		&speciesDefault, 0, 0, 0, &PRM_SpareData::objPath),
+	//PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST,  1, &speciesPlugName,
+	//	&speciesDefault, 0, 0, 0, &PRM_SpareData::objPath),
     PRM_Template() // List terminator
 };
 
@@ -159,7 +185,7 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	
 	// Initialize however many plant types you want, right now the constructor is the same for each
 	// TODO diversify
-	newEco->initNewSpecies(/* TODO add parameters*/);
+	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/);
 
 	// Initialize plant from current ecosystem parameters
 	newEco->createPlant(/*add position maybe*/);
@@ -381,7 +407,7 @@ OBJ_Ecosystem::cook(OP_Context &context) {
 OP_ERROR
 OBJ_Ecosystem::cookMyObj(OP_Context &context)
 {
-	//std::cout << "ECO COOK START" << std::endl;
+	std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
 
 	// TIME: Allow for the ecosystem age to also be impacted by the timeline, as well as the slider
@@ -429,7 +455,8 @@ SOP_Plant* OBJ_Ecosystem::createPlant(/*add position maybe*/) {
 }
 
 /// Initializes a plant node in this ecosystem with a pre-selected species (usually called in Seeding)
-SOP_Plant* OBJ_Ecosystem::createPlant(std::shared_ptr<PlantSpecies> currSpecies /*add position maybe*/) {
+SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position maybe*/) {
+//SOP_Plant* OBJ_Ecosystem::createPlant(std::shared_ptr<PlantType> currSpecies /*add position maybe*/) {
 	OP_Node* node = createNode("PlantNode");
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
@@ -458,16 +485,48 @@ void OBJ_Ecosystem::setMerger(OP_Node* mergeNode) {
 }
 
 /// Initialized a new PlantSpecies
-void OBJ_Ecosystem::initNewSpecies(/* TODO add parameters*/) {
+void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
 	// Decide on a path
-	UT_String path;
-	getFullPath(path);
-	// TODO change - Currently just the default
-	speciesList.push_back(std::make_shared<PlantSpecies>(path));
+	//UT_String path;
+	//getFullPath(path); // TODO to parent network maybe?
+	/// TODO change - Currently just the default
+	//speciesList.push_back(std::make_shared<PlantType>(path));
+
+
+	OP_Node* psNode = getParent()->createNode("SingleSpecies");
+	if (!psNode) { std::cout << "PlantSpecies Node is Nullptr" << std::endl; }
+	else if (!psNode->runCreateScript())
+		std::cout << "PlantSpecies constructor error" << std::endl;
+	
+	PlantSpecies* plantSpec = (PlantSpecies*)psNode;
+	if (plantSpec) { 
+		//UT_String p;
+		//getFullPath(p);
+		//p += "/PlantNode1";
+		//plantSpec->tempPath(p);
+		speciesList.push_back(plantSpec); 
+	
+		UT_String path;
+		plantSpec->getRelativePathTo(this, path);
+		//plantSpec->getFullPath(path);
+		
+		int specIdx = evalInt(speciesListName.getToken(), 0, t) - 1;
+		setStringInst(path, CH_STRING_LITERAL,
+			speciesPlugName.getToken(), &specIdx, 0, t);
+		//setData(const char *parmname, int vectori, fpreal t,
+		//	const PRM_DataItemHandle &val);
+	}
+}
+
+void OBJ_Ecosystem::initAndAddSpecies(fpreal t/* TODO add parameters*/) {
+	int numSpec = evalInt(speciesListName.getToken(), 0, t);
+	setInt(speciesListName.getToken(), 0, t, numSpec + 1);
+
+	initNewSpecies(t/* TODO add parameters*/);
 }
 
 /// Choose a likely plant species to spawn based on current spawn location's climate features
-std::shared_ptr<PlantSpecies> 
+PlantSpecies* //std::shared_ptr<PlantType>//std::shared_ptr<PlantSpecies> 
 OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) {
 	// TODO randomly choose plantSpecies based on climate
 	if (!speciesList.empty()) {

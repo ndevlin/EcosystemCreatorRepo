@@ -86,7 +86,7 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
-	// std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
+	std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
 	fpreal now = context.getTime();
 	//flags().setTimeDep(false);
 
@@ -179,7 +179,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 				// Testing ideal joint locations
 				///drawSphereAtEachNode(gdp, root);
 
-				// Way to get center of bounding sphere: (if agent collision doesn't work)
+				// Way to get center of bounding sphere:
 				///UT_BoundingBox bbox;
 				///moduleAgent->getBounds(bbox);
 				///UT_Vector3 center = (bbox.minvec() + bbox.maxvec()) * 0.5f;

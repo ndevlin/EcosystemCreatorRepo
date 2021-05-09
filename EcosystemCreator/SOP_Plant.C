@@ -278,7 +278,7 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: SOP_Node(net, name, op), ecosystem(nullptr), plantSpecies(nullptr),
+	: SOP_Node(net, name, op), ecosystem(nullptr), plantSpecies(nullptr),  //plantType(nullptr), //
 	rootModule(nullptr), merger(nullptr)
 {
 	createAndGetOperatorTable();
@@ -303,6 +303,24 @@ SOP_Plant::~SOP_Plant() {}
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
+	std::cout << "PLANT COOK START" << std::endl;
+	//if (!ecosystem) {
+	//	// If it was initialized in an ecosystem, but not BY ecosystem...
+	//	auto eco = dynamic_cast<OBJ_Ecosystem*>(getParent()->getOperator());
+	//	if (eco != NULL) {
+	//		// Update with the correct pointers and a RANDOM species
+	//		if (rootModule) { rootModule->destroySelf(); }
+	//		initPlant((OBJ_Ecosystem*)eco, eco->chooseSpecies(), eco->getAge());
+	//		eco->addToMerger(this);
+	//	}
+	//	// Else notify user of error
+	//	else {
+	//		std::cout << "ERROR: Plant Sop must be initialized inside an Ecosystem Geo" << std::endl;
+	//		addError(SOP_ERR_BADNODE, "Plant Sop must be initialized inside an Ecosystem Geo");
+	//		return UT_ERROR_WARNING;
+	//	}
+	//}
+
 	fpreal now = context.getTime();
 	UT_Interrupt	*boss;
 	myCurrPoint = 0;
@@ -334,6 +352,9 @@ SOP_Plant::cookMySop(OP_Context &context)
 	if (ecosystem) {
 		addExtraInput(ecosystem, OP_INTEREST_DATA);
 	}
+	if (plantSpecies) {
+		addExtraInput(plantSpecies, OP_INTEREST_DATA);
+	}
 
 	if (error() < UT_ERROR_ABORT)
 	{
@@ -347,6 +368,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 		// WARNING - does not update after you leave network until next cook
 		output = (SOP_Node*)getDisplayNodePtr();
 		if (output) {
+			std::cout << "P-Reached" << std::endl;
 			// TODO find a better way, "instance" it maybe
 			gdp->stashAll();
 			// WARNING - Plant cook encompasses all children cooks.
@@ -373,6 +395,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 	triggerOutputChanged();
 
     myCurrPoint = -1;
+	std::cout << "PLANT COOK END" << std::endl;
 	return error();
 }
 
@@ -392,7 +415,8 @@ SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interes
 ///////////////////// OUR FUNCTIONS FOR PLANT SOP MANAGEMENT ///////////////////
 
 /// Initialize the actual plant based on the environment (the root SOP_Branch)
-void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> currSpecies,
+void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies,
+//void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantType> currSpecies,
 	float worldTime)
 {
 	ecosystem = eco;
@@ -400,6 +424,7 @@ void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> curr
 
 	if (currSpecies) {
 		plantSpecies = currSpecies;
+		//plantType = currSpecies;
 
 		if (merger) {
 			// Create the root branch module
@@ -427,6 +452,7 @@ void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> curr
 /// Generate a prototype copy to store as an editable tree in a SOP_Branch
 BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
 	return plantSpecies->copyPrototypeFromList(lambda, determ);
+	//return plantType->copyPrototypeFromList(lambda, determ);
 }
 
 /// Add the corresponding node as an input to the stored merge node
@@ -494,7 +520,7 @@ SOP_Plant::createAndGetOperatorTable()
 {
 	// Chain custom SOP operators onto the default SOP operator table
 	OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
-	// TODO maybe add Branch Module here since it's dependent on parent
+	// TODO maybe add Branch Module here since it's dependent on parent // wait no
 
 	// Notify observers of the operator table that it has been changed.
 	table.notifyUpdateTableSinksOfUpdate();

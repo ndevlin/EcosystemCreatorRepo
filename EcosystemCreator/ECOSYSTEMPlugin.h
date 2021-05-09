@@ -43,8 +43,13 @@ public:
 
 	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
 	SOP_Plant* createPlant(/*add position maybe*/);
-	SOP_Plant* createPlant(std::shared_ptr<PlantSpecies> currSpecies /*add position maybe*/);
+	SOP_Plant* createPlant(PlantSpecies* currSpecies /*add position maybe*/);
+	//SOP_Plant* createPlant(std::shared_ptr<PlantType> currSpecies /*add position maybe*/);
 			// TODO, seeding (in SOP_Plant)
+
+	/// Choose a likely plant species to spawn based on current spawn location's climate features
+	PlantSpecies* chooseSpecies(/* TODO use enviro parameters at curr location */);
+	//std::shared_ptr<PlantType> chooseSpecies(/* TODO use enviro parameters at curr location */);
 
 protected:
 
@@ -65,10 +70,8 @@ protected:
 	void setMerger(OP_Node* mergeNode);
 
 	/// Initialized a new PlantSpecies
-	void initNewSpecies(/* TODO add parameters*/); // TODO move to its own node
-
-	/// Choose a likely plant species to spawn based on current spawn location's climate features
-	std::shared_ptr<PlantSpecies> chooseSpecies(/* TODO use enviro parameters at curr location */);
+	void initNewSpecies(fpreal t/* TODO add parameters*/);
+	void initAndAddSpecies(fpreal t/* TODO add parameters*/);
 
 private:
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
@@ -82,7 +85,8 @@ private:
 
 	float worldAge;
 
-	std::vector<std::shared_ptr<PlantSpecies>> speciesList;
+	std::vector<PlantSpecies*> speciesList;
+	//std::vector<std::shared_ptr<PlantType>> speciesList;
 
 	OP_Node* eco_merger;
 };

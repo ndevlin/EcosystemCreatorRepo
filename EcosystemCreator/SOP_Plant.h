@@ -4,6 +4,7 @@
 #include <SOP/SOP_Node.h>
 #include <SOP_Branch.h>
 #include "PlantSpecies.h"
+//#include "PlantType.h"
 
 #include <CH/CH_Manager.h>
 
@@ -65,8 +66,8 @@ public:
 
 	// PLANT SOP FUNCTIONS
 	/// Initialize the actual plant based on the environment (root SOP_Branch)
-	void initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantSpecies> currSpecies,
-		float worldTime);
+	void initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies, float worldTime);
+	//void initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantType> currSpecies, float worldTime);
 
 	/// Generate a prototype copy to store as an editable tree in a SOP_Branch
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
@@ -135,8 +136,9 @@ private:
 	float plantBirthday; /// The age the ecosystem was when the plant spawned
 
 	/// ENVIRONMENTAL CONTROL
-	OBJ_Ecosystem* ecosystem;					 /// The ecosystem this was spawned in
-	std::shared_ptr<PlantSpecies> plantSpecies;  /// The species info for this plant
+	OBJ_Ecosystem* ecosystem;	 /// The ecosystem this was spawned in
+	PlantSpecies* plantSpecies;  /// The species info for this plant
+	//std::shared_ptr<PlantType> plantType;
 
 	/// CHILD NODES:
 	/// The root Branch Module of this tree
