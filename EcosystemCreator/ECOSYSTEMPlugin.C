@@ -182,9 +182,9 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	// Initialize however many plant types you want, 
 	// there are several detail prototype structures based off the secont param
 	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
-		0, 27.0f, 4100.0f, 8.9f, 1.0f, 3.0f, -0.5f, 0.25f, 0.4f);
+		0, 27.0f, 4100.0f, 8.9f, 1.0f, 3.0f, -0.5f, 0.17f, 0.4f);
 	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
-		1, 16.0f, 672.0f, 5.4f, 1.0f, 1.0f, -0.2f, 0.09f, 0.2f);
+		1, 16.0f, 672.0f, 5.4f, 1.0f, 1.0f, -0.2f, 0.1f, 0.2f);
 	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
 		2, 8.0f, 672.0f, 8.9f, 1.0f, 0.0f, -0.2f, 0.35f, 0.5f);
 
@@ -208,9 +208,8 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!grid->runCreateScript())
 		std::cout << "Grid constructor error" << std::endl;
 
-	//grid->setFloatInst("sizex", 0, 0.f, 100.f);
-	//grid->setFloatInst("sizey", 0, 0.f, 100.f);
-	//grid->setFloatInst(100.0f, "sizex", 0, 1, 0.0f);
+	grid->setFloat("size", 0, 0.f, 60.f);
+	grid->setFloat("size", 1, 0.f, 60.f);
 
 	grid->moveToGoodPosition();
 
@@ -280,6 +279,7 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		}
 		else if (!treeCopyToPoints->runCreateScript())
 			std::cout << "Copy To Points constructor error" << std::endl;
+
 		treeCopyToPoints->connectToInputNode(*newPlant, 0, 0);
 		treeCopyToPoints->connectToInputNode(*scatter, 1, 0);
 		treeCopyToPoints->moveToGoodPosition();
@@ -518,6 +518,10 @@ OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) 
 	// TODO randomly choose plantSpecies based on climate variables and likelihood list
 	// TODO later, should really move to a map
 	if (!speciesList.empty()) {
+		//float r = (float)rand() / RAND_MAX;
+		//float total = 0.0f;
+
+
 		return speciesList.at(0);
 	}
 	return nullptr;
