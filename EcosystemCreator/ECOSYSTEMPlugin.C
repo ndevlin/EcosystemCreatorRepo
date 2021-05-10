@@ -172,25 +172,11 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 {
 	OBJ_Ecosystem* newEco = new OBJ_Ecosystem(net, name, op);
 
-	//// Create a merge node to merge all sop output geom
-	OP_Node* mergeNode = newEco->createNode("merge");
-
-	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-	if (mergeNode) { newEco->setMerger(mergeNode); }
-
 	/////// PLANTS ////////
 	
 	// Initialize however many plant types you want, right now the constructor is the same for each
 	// TODO diversify
 	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/);
-
-	// Initialize plant from current ecosystem parameters
-	newEco->createPlant(/*add position maybe*/);
-
-	if (mergeNode) { mergeNode->moveToGoodPosition(); }
 
 	/*newPlant->setPrototypeList();
 
@@ -200,12 +186,75 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
 	else if (!mergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
+	*/
 
-	int numPlants = 1;//3;
+
+	// Create a merge node to merge all sop output geom
+	OP_Node* allTreesMergeNode = newEco->createNode("merge");
+
+	if (!allTreesMergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!allTreesMergeNode->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+
+
+	// Grid to represent ground
+	OP_Node* grid = newEco->createNode("grid");
+	if (!grid)
+	{
+		std::cout << "Grid is Nullptr" << std::endl;
+		return newEco;
+	}
+	else if (!grid->runCreateScript())
+		std::cout << "Grid constructor error" << std::endl;
+
+	grid->moveToGoodPosition();
+
+	// Color for ground
+	OP_Node* groundColor = newEco->createNode("color");
+	if (!groundColor)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newEco;
+	}
+	else if (!groundColor->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
+
+	groundColor->connectToInputNode(*grid, 0, 0);
+	groundColor->moveToGoodPosition();
+
+
+	// Mountain to vary terrain
+	OP_Node* mountain = newEco->createNode("mountain");
+	if (!mountain)
+	{
+		std::cout << "Mountain is Nullptr" << std::endl;
+		return newEco;
+	}
+	else if (!mountain->runCreateScript())
+		std::cout << "Mountain constructor error" << std::endl;
+
+	mountain->connectToInputNode(*groundColor, 0, 0);
+	mountain->moveToGoodPosition();
+
+
+	
+
+	int index = 0;
+
+	std::vector<OP_Node *> scatterNodes;
+
+
+
+
+
+
+
+	int numPlants = 2;//3;
 
 	for (int i = 0; i < numPlants; i++)
 	{
-		OP_Node* node = newPlant->createNode("BranchModule");
+		// Initialize plant from current ecosystem parameters
+		OP_Node* node = newEco->createPlant(/*add position maybe*/);
 
 		// Quick issue check
 		if (!node) { std::cout << "Root module is Nullptr" << std::endl; }
@@ -214,6 +263,7 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 		node->moveToGoodPosition();
 
+		/*
 		SOP_Branch* bNode = (SOP_Branch*)node;
 		newPlant->setRootModule(bNode);
 		newPlant->setMerger(mergeNode);
@@ -221,11 +271,57 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		//mergeNode->connectToInputNode(*node, 0);
 
 		node->moveToGoodPosition();
+		*/
+
+
+
+		// Scatter to create points
+		OP_Node* scatter = newEco->createNode("scatter");
+		if (!scatter)
+		{
+			std::cout << "Scatter is Nullptr" << std::endl;
+			return newEco;
+		}
+		else if (!scatter->runCreateScript())
+			std::cout << "Scatter constructor error" << std::endl;
+
+		scatterNodes.push_back(scatter);
+		scatter->connectToInputNode(*mountain, 0, 1);
+
+		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
+
+		scatter->setFloat("npts", 0, 0.f, 10);
+
+
+		scatter->moveToGoodPosition();
+
+		// treeCopyToPoints to create instances of the tree for a forest
+		OP_Node* treeCopyToPoints = newEco->createNode("copytopoints");
+		if (!treeCopyToPoints)
+		{
+			std::cout << "Copy To Points is Nullptr" << std::endl;
+			return newEco;
+		}
+		else if (!treeCopyToPoints->runCreateScript())
+			std::cout << "Copy To Points constructor error" << std::endl;
+		treeCopyToPoints->connectToInputNode(*node, 0, 0);
+		treeCopyToPoints->connectToInputNode(*scatter, 1, 0);
+		treeCopyToPoints->moveToGoodPosition();
+
+
+		allTreesMergeNode->connectToInputNode(*treeCopyToPoints, index, 0);
+		index++;
+
+
 	}
 
-	mergeNode->moveToGoodPosition();
+	allTreesMergeNode->connectToInputNode(*mountain, index, 0);
 
+	allTreesMergeNode->moveToGoodPosition();
 
+	allTreesMergeNode->setVisible(true);
+
+	/*
 	// Color for bark
 	OP_Node* color1 = newPlant->createNode("color");
 	if (!color1)
