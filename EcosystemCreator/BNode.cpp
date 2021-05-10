@@ -104,7 +104,7 @@ void BNode::setAge(float changeInAge,
 	// For full branch-segments only, update length and position:
 	else if (parent) {
 		// TODO make this a more smooth curve, slow down over time
-		float branchLength = min(maxLength, age * 0.3f);
+		float branchLength = min(maxLength, age * plantVars->getBeta());
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
 		branchLength = branchLength * branchLength * (3 - 2 * branchLength);
 		branchLength = (max(min(branchLength, 1.0f), 0.5f) - 0.5f) * 2.0f * maxLength;*/
@@ -123,7 +123,7 @@ void BNode::setAge(float changeInAge,
 	}
 
 	// Branch thickness update:
-	thickness = max(0.015f, age * baseRadius * 0.4f);
+	thickness = max(0.015f, age * baseRadius * plantVars->getTC());
 	// There's an age difference of 1 between terminal nodes and their children
 	// This is how I've decided to deal with it for now
 	if (parent && isRoot()) { thickness = parent->getThickness(); }

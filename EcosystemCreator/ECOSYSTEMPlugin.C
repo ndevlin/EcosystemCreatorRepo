@@ -22,18 +22,6 @@ newObjectOperator(OP_OperatorTable *table)
 	                    OBJ_Ecosystem::buildVariablePair(0), // Local variables
 						OP_FLAG_NETWORK)		             // Flag it as a network
 	);
-	
-	/*table->addOperator(
-		new OP_Operator("SingleSpecies",                 // Internal name
-						"Plant Species",				// UI name
-	                    PlantSpecies::myConstructor,	    // How to build the SOP
-	                    PlantSpecies::buildTemplatePair(0), // My parameters
-	                    PlantSpecies::theChildTableName,    // Table of child nodes
-	                    0, 							        // Min # of sources
-						1,							        // Max # of sources TODO ?
-	                    PlantSpecies::buildVariablePair(0), // Local variables
-						OP_FLAG_NETWORK)		            // Flag it as a network
-	);*/
 }
 
 ///
@@ -87,16 +75,30 @@ static PRM_Name	timeShiftName("timeShift",    "Time Shift");
 
 static PRM_Name speciesListName("pspecies", "Plant Species List");
 static PRM_Name speciesPlugName("specItem#", "Plant Species #");
+
+static PRM_Name temperatureName("temperature", "Temperature");
+static PRM_Name rainfallName("rainfall", "Rainfall");
+//static PRM_Name randomnessName("randomness", "Randomness");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
 static PRM_Default totalAgeDefault(0, "0.0");
 static PRM_Default timeShiftDefault(0.0);
+
 static PRM_Default speciesDefault(0, "*");
+
+static PRM_Default temperatureDefault(28.0);
+static PRM_Default rainfallDefault(4100);
+//static PRM_Default randomnessDefault(0.5);
 
 // Set up the ranges for the parameter inputs here
 static PRM_Range timeShiftRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
+
+static PRM_Range temperatureRange(PRM_RANGE_RESTRICTED, -10.0, PRM_RANGE_RESTRICTED, 33.0);
+static PRM_Range rainfallRange(PRM_RANGE_RESTRICTED, 10, PRM_RANGE_RESTRICTED, 4300);
+//static PRM_Range randomnessRange(PRM_RANGE_RESTRICTED, 0.0, PRM_RANGE_UI, 1.0);
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -117,10 +119,13 @@ PRM_Template
 OBJ_Ecosystem::myTemplateList[] = {
 	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &totalAgeName,  &totalAgeDefault),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &timeShiftName, &timeShiftDefault, 0, &timeShiftRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &temperatureName, &temperatureDefault, 0, &temperatureRange),
+	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &rainfallName, &rainfallDefault, 0, &rainfallRange),
 	//PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST, 1, &speciesListName,
 	//	&speciesDefault, &speciesMenu, 0, 0, &PRM_SpareData::sopPath), // TODO fix spare
 	PRM_Template(PRM_MULTITYPE_LIST, speciesItemTemplate, 0, &speciesListName,
                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
+	//PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &randomnessName, &randomnessDefault, 0, &randomnessRange),
 	PRM_Template()
 };
 
@@ -174,20 +179,14 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 
 	/////// PLANTS ////////
 	
-	// Initialize however many plant types you want, right now the constructor is the same for each
-	// TODO diversify
-	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/);
-
-	/*newPlant->setPrototypeList();
-
-	// Create a merge node to merge all sop output geom
-	OP_Node* mergeNode = newPlant->createNode("merge");
-
-	if (!mergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-	*/
-
+	// Initialize however many plant types you want, 
+	// there are several detail prototype structures based off the secont param
+	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
+		0, 27.0f, 4100.0f, 8.9f, 1.0f, 3.0f, -0.5f, 0.25f, 0.4f);
+	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
+		1, 16.0f, 672.0f, 5.4f, 1.0f, 1.0f, -0.2f, 0.09f, 0.2f);
+	newEco->initAndAddSpecies(0.0f /* TODO add parameters*/,
+		2, 8.0f, 672.0f, 8.9f, 1.0f, 0.0f, -0.2f, 0.35f, 0.5f);
 
 	// Create a merge node to merge all sop output geom
 	OP_Node* allTreesMergeNode = newEco->createNode("merge");
@@ -195,6 +194,8 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	if (!allTreesMergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
 	else if (!allTreesMergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
+
+	if (allTreesMergeNode) { newEco->setMerger(allTreesMergeNode); }
 
 
 	// Grid to represent ground
@@ -206,6 +207,10 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	}
 	else if (!grid->runCreateScript())
 		std::cout << "Grid constructor error" << std::endl;
+
+	//grid->setFloatInst("sizex", 0, 0.f, 100.f);
+	//grid->setFloatInst("sizey", 0, 0.f, 100.f);
+	//grid->setFloatInst(100.0f, "sizex", 0, 1, 0.0f);
 
 	grid->moveToGoodPosition();
 
@@ -237,43 +242,15 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	mountain->moveToGoodPosition();
 
 
-	
-
 	int index = 0;
 
-	std::vector<OP_Node *> scatterNodes;
+	int numTypes = newEco->numSpecies(); // 2;//3;
 
-
-
-
-
-
-
-	int numPlants = 2;//3;
-
-	for (int i = 0; i < numPlants; i++)
+	for (int i = 0; i < numTypes; i++)
 	{
 		// Initialize plant from current ecosystem parameters
-		OP_Node* node = newEco->createPlant(/*add position maybe*/);
-
-		// Quick issue check
-		if (!node) { std::cout << "Root module is Nullptr" << std::endl; }
-		else if (!node->runCreateScript())
-			std::cout << "Root module constructor error" << std::endl;
-
-		node->moveToGoodPosition();
-
-		/*
-		SOP_Branch* bNode = (SOP_Branch*)node;
-		newPlant->setRootModule(bNode);
-		newPlant->setMerger(mergeNode);
-		newPlant->addToMerger(bNode);
-		//mergeNode->connectToInputNode(*node, 0);
-
-		node->moveToGoodPosition();
-		*/
-
-
+		//SOP_Plant* newPlant = newEco->createPlant(/*add position maybe*/);
+		SOP_Plant* newPlant = newEco->createPlant(newEco->getSpeciesAtIdx(i));
 
 		// Scatter to create points
 		OP_Node* scatter = newEco->createNode("scatter");
@@ -285,13 +262,12 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		else if (!scatter->runCreateScript())
 			std::cout << "Scatter constructor error" << std::endl;
 
-		scatterNodes.push_back(scatter);
+		newEco->scatterNodes.push_back(scatter);
 		scatter->connectToInputNode(*mountain, 0, 1);
 
 		scatter->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
-
-		scatter->setFloat("npts", 0, 0.f, 10);
-
+		scatter->setInt("npts", 0, 0.f, 
+			int(round(newEco->numRandPlants() * newEco->getLikelihoodAtIdx(i))));
 
 		scatter->moveToGoodPosition();
 
@@ -304,181 +280,31 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		}
 		else if (!treeCopyToPoints->runCreateScript())
 			std::cout << "Copy To Points constructor error" << std::endl;
-		treeCopyToPoints->connectToInputNode(*node, 0, 0);
+		treeCopyToPoints->connectToInputNode(*newPlant, 0, 0);
 		treeCopyToPoints->connectToInputNode(*scatter, 1, 0);
 		treeCopyToPoints->moveToGoodPosition();
-
 
 		allTreesMergeNode->connectToInputNode(*treeCopyToPoints, index, 0);
 		index++;
 
-
 	}
 
 	allTreesMergeNode->connectToInputNode(*mountain, index, 0);
-
 	allTreesMergeNode->moveToGoodPosition();
-
 	allTreesMergeNode->setVisible(true);
 
-	/*
-	// Color for bark
-	OP_Node* color1 = newPlant->createNode("color");
-	if (!color1)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color1->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-
-	OP_Node* mergeNode2 = newPlant->createNode("merge");
-	if (!mergeNode2) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode2->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-
-	
-	// Copy to Points to allow leaf instancing
-	OP_Node* copyToPoints = newPlant->createNode("copytopoints");
-	if (!copyToPoints) 
-	{ 
-		std::cout << "Copy To Points is Nullptr" << std::endl; 
-		return newPlant;
-	}
-	else if (!copyToPoints->runCreateScript())
-		std::cout << "Copy To Points constructor error" << std::endl;
-
-	// Star will serve as a leaf for now
-	OP_Node* star = newPlant->createNode("star");
-	if (!star)
-	{
-		std::cout << "Star is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!star->runCreateScript())
-		std::cout << "Star constructor error" << std::endl;
-
-	star->moveToGoodPosition();
-
-	// Color for leaves
-	OP_Node* color2 = newPlant->createNode("color");
-	if (!color2)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color2->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-	color2->connectToInputNode(*star, 0, 0);
-	color2->moveToGoodPosition();
-
-
-	copyToPoints->connectToInputNode(*mergeNode, 1, 0);
-
-	mergeNode2->connectToInputNode(*copyToPoints, 0, 0);
-
-	mergeNode2->connectToInputNode(*color1, 1, 0);
-
-	copyToPoints->moveToGoodPosition();
-
-	mergeNode2->moveToGoodPosition();
-
-
-	OP_Node* mergeNode3 = newPlant->createNode("merge");
-	if (!mergeNode3) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode3->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-	// copyToPoints2 to create instances of the tree for a forest
-	OP_Node* copyToPoints2 = newPlant->createNode("copytopoints");
-	if (!copyToPoints2)
-	{
-		std::cout << "Copy To Points is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!copyToPoints2->runCreateScript())
-		std::cout << "Copy To Points constructor error" << std::endl;
-
-
-	
-	// Grid to represent ground
-	OP_Node* grid = newPlant->createNode("grid");
-	if (!grid)
-	{
-		std::cout << "Grid is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!grid->runCreateScript())
-		std::cout << "Grid constructor error" << std::endl;
-
-	grid->moveToGoodPosition();
-	
-
-	// Mountain to vary terrain
-	OP_Node* mountain = newPlant->createNode("mountain");
-	if (!mountain)
-	{
-		std::cout << "Mountain is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!mountain->runCreateScript())
-		std::cout << "Mountain constructor error" << std::endl;
-
-	mountain->connectToInputNode(*grid, 0, 0);
-	mountain->moveToGoodPosition();
-
-
-	// Color for leaves
-	OP_Node* color3 = newPlant->createNode("color");
-	if (!color3)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color3->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-
-	// Scatter to create points
-	OP_Node* scatter = newPlant->createNode("scatter");
-	if (!scatter)
-	{
-		std::cout << "Scatter is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!scatter->runCreateScript())
-		std::cout << "Scatter constructor error" << std::endl;
-
-	scatter->connectToInputNode(*mountain, 0, 0);
-	scatter->moveToGoodPosition();
-
-
-	copyToPoints2->connectToInputNode(*mergeNode2, 0, 0);
-	copyToPoints2->connectToInputNode(*scatter, 1, 0);
-	copyToPoints2->moveToGoodPosition();
-
-
-	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
-	mergeNode3->connectToInputNode(*color3, 1, 0);
-	mergeNode3->moveToGoodPosition();
-
-	color3->connectToInputNode(*mountain, 0, 0);
-	color3->moveToGoodPosition();
-	
-	color1->connectToInputNode(*mergeNode, 0, 0);
-	color1->moveToGoodPosition();
-	*/
 	return newEco;
 }
 
 OBJ_Ecosystem::OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op)
-	: OBJ_Geometry(net, name, op), speciesList(), eco_merger(nullptr)
+	: OBJ_Geometry(net, name, op), 
+		scatterNodes(), speciesList(), speciesLikelihood(), eco_merger(nullptr)
 {
     myCurrPoint = -1; // To prevent garbage values from being returned
 	worldAge = 0.0f;
+	worldTemp = 28.0f;
+	worldPrecip = 4100.0f;
+	totalPlants = 20.0f;
 }
 
 OBJ_Ecosystem::~OBJ_Ecosystem() {}
@@ -510,6 +336,32 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 	// HOWEVER: only using this just cooks on every NEW frame. Fixed in cook() above
 	flags().setTimeDep(true);
 	flags().setTimeInterest(true); // doesn't make a difference? // childFlagChange ?
+
+	// Get current ecosystem-related values
+	float temperature;
+	float rainfall;
+	///float randomness;
+
+	temperature = TEMPERATURE(now);
+	rainfall = RAINFALL(now);
+	///randomness = RANDOMNESS(now);
+
+	//rootModules.at(i)->temperature = temperature;
+	//rootModules.at(i)->rainfall = rainfall;
+	///BranchPrototype::setRandomness(randomness);
+
+	// Also do if climate parameters of Plant Species change
+	if (abs(worldTemp - temperature) > 0.05 || abs(worldPrecip - rainfall) > 0.5) {
+		worldTemp = temperature;
+		worldPrecip = rainfall;
+
+		recalculateLikelihood();
+
+		for (int i = 0; i < scatterNodes.size(); i++) {
+			scatterNodes.at(i)->setInt("npts", 0, 0.f,
+				int(round(numRandPlants() * getLikelihoodAtIdx(i))));
+		}
+	}
 
 	worldAge = AGE(now) + now;
 	
@@ -568,6 +420,7 @@ SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position m
 	return newPlant;
 }
 
+
 //////////////////////////// PROTECTED CLASS FUNCTIONS /////////////////////////
 
 /// Stores the merge node that combines all plant geometry, sets as display node
@@ -580,7 +433,10 @@ void OBJ_Ecosystem::setMerger(OP_Node* mergeNode) {
 }
 
 /// Initialized a new PlantSpecies
-void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
+void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/, 
+	int defaultSpeciesType, float temp, float precip, float maxAge, float growthRate,
+	float g1Init, float g2Init, float lengthMult, float thickMult) {
+
 	// Create the Species node inside the ecosystem geometry
 	OP_Node* psNode = createNode("SingleSpecies");
 	if (!psNode) { std::cout << "PlantSpecies Node is Nullptr" << std::endl; }
@@ -590,7 +446,12 @@ void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
 	// Making connections to the Species
 	PlantSpecies* plantSpec = (PlantSpecies*)psNode;
 	if (plantSpec) { 
-		speciesList.push_back(plantSpec); 
+		// Properly initialize with custom parameters
+		plantSpec->initWithParameters(defaultSpeciesType, temp, precip, maxAge,
+			growthRate, g1Init, g2Init, lengthMult, thickMult);
+
+		speciesList.push_back(plantSpec);
+		recalculateLikelihood();
 	
 		// Add it to the species list
 		UT_String path;
@@ -604,19 +465,81 @@ void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
 	}
 }
 
-void OBJ_Ecosystem::initAndAddSpecies(fpreal t/* TODO add parameters*/) {
+void OBJ_Ecosystem::initAndAddSpecies(fpreal t/* TODO add parameters*/, 
+	int defaultSpeciesType, float temp, float precip, float maxAge, float growthRate, 
+	float g1Init, float g2Init, float lengthMult, float thickMult) {
+
 	int numSpec = evalInt(speciesListName.getToken(), 0, t);
 	setInt(speciesListName.getToken(), 0, t, numSpec + 1);
 
-	initNewSpecies(t/* TODO add parameters*/);
+	initNewSpecies(t, defaultSpeciesType, temp, precip, maxAge, growthRate,
+		g1Init, g2Init, lengthMult, thickMult);
+}
+
+// Temp only for initializing species in myConstructor
+PlantSpecies* OBJ_Ecosystem::getSpeciesAtIdx(int idx) {
+	if (speciesList.empty()) {
+		return nullptr;
+	}
+	else if (idx < 0) {
+		return speciesList.at(0);
+	}
+	else if (idx >= numSpecies()) {
+		return speciesList.at(numSpecies() - 1);
+	}
+	return speciesList.at(idx);
+}
+
+// Temp only for initializing species in myConstructor
+float OBJ_Ecosystem::getLikelihoodAtIdx(int idx) const {
+	if (speciesLikelihood.empty()) {
+		return 0.0f;
+	}
+	else if (idx < 0) {
+		return speciesLikelihood.at(0);
+	}
+	else if (idx >= speciesLikelihood.size()) {
+		return speciesLikelihood.at(speciesLikelihood.size() - 1);
+	}
+	return speciesLikelihood.at(idx);
+}
+
+int OBJ_Ecosystem::numSpecies() const {
+	return speciesList.size();
+}
+
+int OBJ_Ecosystem::numRandPlants() const {
+	return totalPlants;
 }
 
 /// Choose a likely plant species to spawn based on current spawn location's climate features
 PlantSpecies*
 OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) {
-	// TODO randomly choose plantSpecies based on climate
+	// TODO randomly choose plantSpecies based on climate variables and likelihood list
+	// TODO later, should really move to a map
 	if (!speciesList.empty()) {
 		return speciesList.at(0);
 	}
 	return nullptr;
+}
+
+void OBJ_Ecosystem::recalculateLikelihood() {
+	speciesLikelihood.clear();
+	float total = 0.0f;
+
+	for (int i = 0; i < speciesList.size(); i++) {
+		float tempDif = 43.0f - abs(worldTemp - speciesList.at(i)->getTemp());
+		float precipDif = 4290.0f - abs(worldPrecip - speciesList.at(i)->getPrecip());
+
+		float currWeight = tempDif / 43.0f + precipDif / 4290.0f;
+
+		total += currWeight;
+		speciesLikelihood.push_back(currWeight);
+	}
+
+	for (int i = 0; i < speciesLikelihood.size(); i++) {
+		if (total > 0.00001f) {
+			speciesLikelihood.at(i) /= total;
+		}
+	}
 }

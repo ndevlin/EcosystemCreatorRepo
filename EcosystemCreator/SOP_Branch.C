@@ -97,11 +97,8 @@ SOP_Branch::cookMySop(OP_Context &context)
 	fpreal now = context.getTime();
 	//flags().setTimeDep(false);
 
-	// Cylinder variables
     UT_Interrupt	*boss;
 	myCurrPoint = 0;		// Initialize the PT local variable
-	int divisions  = 10.0;	// The divisions per cylinder
-    // myTotalPoints  Unneeded
 
 	// If the root node
 	// Explicitly state dependency on plant, so that this is dirtied every time plant updates
@@ -252,8 +249,8 @@ void SOP_Branch::setAge(float changeInAge) {
 			for (std::shared_ptr<BNode> terminalNode : terminalNodes) {
 				SOP_Branch* newModule = (SOP_Branch*)plant->createNode("BranchModule");
 
-				if (!newModule) { std::cout << "Child Node is Nullptr" << std::endl; }
-				else if (!newModule->runCreateScript()) { std::cout << "Constuction error" << std::endl; }
+				if (!newModule) { std::cout << "Branch Node is Nullptr" << std::endl; }
+				else if (!newModule->runCreateScript()) { std::cout << "Branch constuction error" << std::endl; }
 
 				// TODO: set lambda and determ properly
 				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
@@ -316,6 +313,8 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, float newAge,
 			radiusMultiplier = connectingNode->getBaseRadius() / 
 				prototype->getRootAtIdx(0)->getBaseRadius();
 		}
+
+		// TODO add random Y rotation
 
 		// Get starting orientation of model based off of parent branch
 		UT_Vector3 c = UT_Vector3();

@@ -49,6 +49,10 @@ public:
 	/// Choose a likely plant species to spawn based on current spawn location's climate features
 	PlantSpecies* chooseSpecies(/* TODO use enviro parameters at curr location */);
 
+	// TODO - TEMPORARY saving scatter to update with climate-based likelihood
+	// correspond to speciesList above
+	std::vector<OP_Node*> scatterNodes;
+
 protected:
 
 	OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op);
@@ -68,12 +72,30 @@ protected:
 	void setMerger(OP_Node* mergeNode);
 
 	/// Initialized a new PlantSpecies
-	void initNewSpecies(fpreal t/* TODO add parameters*/);
-	void initAndAddSpecies(fpreal t/* TODO add parameters*/);
+	void initNewSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
+		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
+	
+	void initAndAddSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
+		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
+
+	/// TEMP
+	PlantSpecies* getSpeciesAtIdx(int idx);
+	float getLikelihoodAtIdx(int idx) const;
+
+	/// Report number of species
+	int numSpecies() const;
+	int numRandPlants() const;
 
 private:
+	void recalculateLikelihood();
+
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
-	float AGE(fpreal t)      { return evalFloat("timeShift", 0, t); }
+	float AGE(fpreal t)         { return evalFloat("timeShift", 0, t); }
+	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
+	float RAINFALL(fpreal t)    { return evalFloat("rainfall", 0, t); }
+	//float RANDOMNESS(fpreal t)  { return evalFloat("randomness", 0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -81,9 +103,14 @@ private:
     int		myCurrPoint;
     int		myTotalPoints;
 
+	int totalPlants;
+
 	float worldAge;
+	float worldTemp;
+	float worldPrecip;
 
 	std::vector<PlantSpecies*> speciesList;
+	std::vector<float> speciesLikelihood;
 
 	OP_Node* eco_merger;
 };

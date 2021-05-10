@@ -76,6 +76,8 @@ public:
 
 	/// Get the age of this plant - used in child SOP_Branches
 	float                    getAge();
+	/// Calculate the age impacted by growth rate
+	float                    calcWeightedAge();
 	/// Get the change in age - only works mid-cook
 	float                    getChangeInAge();
 

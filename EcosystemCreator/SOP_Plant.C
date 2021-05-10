@@ -322,18 +322,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 	myCurrPoint = 0;
 	//flags().setTimeDep(false);
 
-	// Get current plant-related values
-	//float ageVal;
-	///float g1Val;
-	///float g2Val;
-
-	//ageVal = AGE(now);
-	///g1Val  = G1(now);
-	///g2Val  = G2(now);
-
-	///BNode::updateG1(g1Val);
-	///BNode::updateG2(g2Val);
-
 	// Check if custom plant age has been adjusted
 	//float diff = ageVal - plantAge;
 	//if (abs(diff) > 0.00005f) {
@@ -373,8 +361,9 @@ SOP_Plant::cookMySop(OP_Context &context)
 		// resulted in the displaying the geometry for OBJ_Ecosystem
 
 		// Update plant age and display in a disabled parameter so the user can see
-		plantAge = ecosystem->getAge() - plantBirthday;
+		plantAge = calcWeightedAge();
 		if (ecosystem->getAge() < plantBirthday) { plantAge = 0.0f; } // TODO delete plant instead
+		else if (plantAge > plantSpecies->getMaxAge()) { plantAge = plantSpecies->getMaxAge(); }
 		setFloat("plantAge", 0, now, plantAge);
 		enableParm("plantAge", false);
 
@@ -456,12 +445,22 @@ float SOP_Plant::getAge() {
 	return plantAge;
 }
 
+/// Calculate the age impacted by growth rate
+float SOP_Plant::calcWeightedAge() {
+	return (ecosystem->getAge() - plantBirthday) * plantSpecies->getGrowthRate();
+}
+
 /// Get the change in age - only works mid-cook
 float SOP_Plant::getChangeInAge() {
 	// TODO When implementing seeding, should delete plant if ecosystem age < birthday
 	// But for now  for consistency with random distribution
 	if (ecosystem->getAge() < plantBirthday) {
 		return plantBirthday - plantAge;
+	}
+	// Same here, delete plant when over max age
+	float weightedAge = calcWeightedAge();
+	if (weightedAge > plantSpecies->getMaxAge()) {
+		return plantSpecies->getMaxAge() - plantAge;
 	}
 
 	return ecosystem->getAge() - (plantAge + plantBirthday);

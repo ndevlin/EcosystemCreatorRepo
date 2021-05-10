@@ -2,6 +2,8 @@
 
 ///// INDIVIDUAL PROTOTYPES /////
 
+float randomness = 0.5;
+
 /// Constructors
 // TODO, for other constructors, make sure to sort the time ranges
 BranchPrototype::BranchPrototype(const char* path, PlantSpeciesVariables* plantVars)
@@ -50,6 +52,11 @@ BranchPrototype::BranchPrototype(BranchPrototype* other)
 BranchPrototype* BranchPrototype::copyValues()
 {
 	return new BranchPrototype(this);
+}
+
+void BranchPrototype::setRandomness(float randIn)
+{
+	randomness = randIn;
 }
 
 void BranchPrototype::initAgentData(const char* path)
@@ -161,40 +168,82 @@ GU_AgentDefinitionPtr BranchPrototype::getAgentDefAtIdx(int i)
 ////// CONTAINER FOR A SET OF PROTOTYPES /////
 
 // Simple default for now
-PrototypeSet::PrototypeSet(const char* path, PlantSpeciesVariables* plantVars)
+PrototypeSet::PrototypeSet(const char* path, PlantSpeciesVariables* plantVars,
+	int defaultSpeciesType)
 {
+	if (defaultSpeciesType == 0) {
+		defaultPrototype0(path, plantVars);
+	}
+	else if (defaultSpeciesType == 1) {
+		defaultPrototype1(path, plantVars);
+	}
+	else {
+		defaultPrototype2(path, plantVars);
+	}
+}
+
+// Some custom default setups
+void PrototypeSet::defaultPrototype0(const char* path, PlantSpeciesVariables* plantVars) {
 	// #1
 	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoFoA\nA->!\"[&FoFoFoA]////[&FoFoFoA]////&FoFoFoA\no->io", 3));
-	
+
 	// #2
 	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoAFoC\nA->/[&FoFoC]////[&FoFoC]////[&FoFoC]\nC->FoAFoC\no->io", 3));
 
 	// #3
 	prototypes.push_back(new BranchPrototype(path, plantVars, "///FoAFoFoC\nA->[&FoFoC]//[&FoFoC]//////[&FoFoC]\nC->FoAFoC\no->io", 3));
-	
+}
+
+void PrototypeSet::defaultPrototype1(const char* path, PlantSpeciesVariables* plantVars) {
 	// #4
-	//prototypes.push_back(new BranchPrototype("FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoFoA\nA->!\"[B]/////[B]////B\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #5
-	//prototypes.push_back(new BranchPrototype("FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
+
+	// #3
+	prototypes.push_back(new BranchPrototype(path, plantVars, "///FoAFoFoC\nA->[&FoFoC]//[&FoFoC]//////[&FoFoC]\nC->FoAFoC\no->io", 3));
+}
+
+void PrototypeSet::defaultPrototype2(const char* path, PlantSpeciesVariables* plantVars) {
+	// #3
+	prototypes.push_back(new BranchPrototype(path, plantVars, "///FoAFoFoC\nA->[&FoFoC]//[&FoFoC]//////[&FoFoC]\nC->FoAFoC\no->io", 3));
+
+	// #5
+	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoFoFoA\nA->!\"[BB]///[BB]////BB\nB->&FFFFA\nC->FoFoFoFoAFoFo\no->io", 3));
 
 	// #6
-	//prototypes.push_back(new BranchPrototype("FoFoFoFo\no->io", 3));
-
+	prototypes.push_back(new BranchPrototype(path, plantVars, "FoFoFoFo\no->io", 3));
 }
 
 /// Method to select a prototype type based on apical control
-BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
+BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ) //, float rainfall, float temperature)
 {
 	// TODO select from a voronoi map. Actually based on lambda and determinancy
 	// For now we are passing in values based on plant age solely instead
+
 	float r = 1.5f / prototypes.size();
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
 
 	float idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
 
-	//return prototypes.at(idx)->copyValues();
-	return prototypes.at(0)->copyValues();
+	return prototypes.at(idx)->copyValues();
+	//return prototypes.at(0)->copyValues();
+
+	/*float idx = (((rainfall + temperature) / 2.f)) * prototypes.size();
+
+	float randAdjust = randomness * (1.f / lambda) * (((float)rand() * 2.f / RAND_MAX) - 1.f);
+
+	int idxInt = int(idx + randAdjust);
+
+	idxInt = std::max(idxInt, 0);
+	idxInt = std::min(idxInt, int(prototypes.size() - 1));
+
+	std::cout << "idxInt: " << idxInt << std::endl;
+
+	//int idx = int((((rainfall + temperature) / 2.f) - 0.00001f) * prototypes.size());
+
+	return prototypes.at(idxInt)->copyValues();*/
 }
 

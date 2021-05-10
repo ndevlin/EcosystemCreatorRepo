@@ -5,6 +5,8 @@
 
 ///// INDIVIDUAL PROTOTYPES /////
 
+extern float randomness;
+
 class BranchPrototype
 {
 public:
@@ -41,6 +43,9 @@ public:
 	/// Static helper to compare float to range
 	static bool isInRange(std::pair<float, float>& range, float time);
 
+	static void setRandomness(float randIn);
+
+
 private:
 	typedef std::pair<std::pair<float, float>, std::shared_ptr<BNode>> AgeGraph;
 
@@ -67,17 +72,23 @@ private:
 class PrototypeSet
 {
 public:
-	PrototypeSet(const char* path, PlantSpeciesVariables* plantVars);
+	PrototypeSet(const char* path, PlantSpeciesVariables* plantVars, 
+		int defaultSpeciesType = 0);
 	// TODO add more constructors
 	~PrototypeSet() {}
 	
 	/// Method to select a prototype type based on apical control
-	BranchPrototype* selectNewPrototype(float lambda, float determ);
+	BranchPrototype* selectNewPrototype(float lambda, float determ);// , float rainfall, float temperature);
 	// TODO ^ add starting orientation?
 
 private:
 	// TODO change to map structure
 	std::vector<BranchPrototype*> prototypes;
+
+	// Some custom default setups
+	void defaultPrototype0(const char* path, PlantSpeciesVariables* plantVars);
+	void defaultPrototype1(const char* path, PlantSpeciesVariables* plantVars);
+	void defaultPrototype2(const char* path, PlantSpeciesVariables* plantVars);
 };
 
 #endif
