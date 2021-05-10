@@ -45,9 +45,6 @@
     <ClCompile Include="PlantSpecies.C">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PlantType.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matrix.h">
@@ -78,9 +75,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PlantSpecies.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PlantType.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,52 +1,35 @@
 #include "BNode.h"
 #include "SOP_Branch.h"
+#include "PlantSpecies.h"
 //using namespace HDK_Sample;
-
-float BNode::g1 = 1.0;
-float BNode::g2 = -0.2;
-
-void BNode::updateG1(float gVal) {
-	g1 = gVal;
-}
-void BNode::updateG2(float gVal) {
-	g2 = gVal;
-}
-
-float BNode::getG1() {
-	return g1;
-}
-float BNode::getG2() {
-	return g2;
-}
 
 /// Constructors
 BNode::BNode() 
-	: position(0.0), age(0.0), maxLength(3.0), thickness(0.1), 
-		parent(nullptr), children(), connectedModules(), rigIndex(-1)
+	: position(0.0), age(0.0), maxLength(3.0), thickness(0.1), parent(nullptr),
+		plantVars(nullptr), children(), connectedModules(), rigIndex(-1)
 {}
 
 BNode::BNode(BNode* other)
 	: position(other->getPos()), unitDir(other->getDir()), age(other->getAge()), 
 		maxLength(other->getMaxLength()), thickness(other->getBaseRadius()), 
 		baseRadius(other->getBaseRadius()), rigIndex(other->getRigIndex()),
-		parent(nullptr), children(), connectedModules(), root(other->isRoot())
-	//: BNode(other->getPos(), other->getDir(), other->getAge(),
-	//	other->getMaxLength(), other->getBaseRadius())
-{
-	//rigIndex = other->getRigIndex();
-}
+		plantVars(other->getPlantVars()), root(other->isRoot()),
+		parent(nullptr), children(), connectedModules()
+{}
 
 BNode::BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick, bool isRootNode)
 	: position(pos), unitDir(dir), age(branchAge), maxLength(length),
-		thickness(thick), baseRadius(thick), parent(nullptr), children(), 
-		connectedModules(), rigIndex(-1), root(isRootNode)
+		thickness(thick), baseRadius(thick), root(isRootNode), 
+		parent(nullptr), plantVars(nullptr), children(),
+		connectedModules(), rigIndex(-1)
 {
 	unitDir.normalize();
 }
 
 BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick, bool isRootNode)
 	: age(branchAge), maxLength(length), thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules(), rigIndex(-1), root(isRootNode)
+		root(isRootNode), parent(nullptr), plantVars(nullptr), children(), 
+		connectedModules(), rigIndex(-1)
 {
 	position = UT_Vector3();
 	position(0) = end[0];
@@ -97,6 +80,10 @@ void BNode::setParent(std::shared_ptr<BNode> par)
 	parent = par;
 }
 
+void BNode::setPlantVars(PlantSpeciesVariables* vars) {
+	plantVars = vars;
+}
+
 void BNode::addChild(std::shared_ptr<BNode> child)
 {
 	children.push_back(child);
@@ -126,11 +113,11 @@ void BNode::setAge(float changeInAge,
 
 		// Calculate tropism offset using  static values
 		// TODO, just get a pointer to plant in BNode so that this isnt the same for all plants
-		float g1Val = pow(0.95f, age * BNode::getG1());   // Controls tropism decrease over time
-		float g2Val = -BNode::getG2();                    // Controls tropism strength
+		float g1 = pow(0.95f, age * plantVars->getG1());   // Controls tropism decrease over time
+		float g2 = -plantVars->getG2();                    // Controls tropism strength
 		UT_Vector3 gDir = UT_Vector3(0.0f, -1.0f, 0.0f);  // Gravity Direction
 
-		UT_Vector3 tOffset = (g1Val * g2Val * gDir) / max(age + g1Val, 0.05f);
+		UT_Vector3 tOffset = (g1 * g2 * gDir) / max(age + g1, 0.05f);
 
 		position += tOffset * branchLength; // scaled it for the effect to be proportionate
 	}
@@ -162,6 +149,10 @@ void BNode::setAge(float changeInAge,
 }
 
 /// GETTERS
+PlantSpeciesVariables* BNode::getPlantVars() {
+	return plantVars;
+}
+
 bool BNode::isRoot() const {
 	return root;
 }

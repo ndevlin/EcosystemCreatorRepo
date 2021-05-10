@@ -4,7 +4,6 @@
 #include <SOP/SOP_Node.h>
 #include <SOP_Branch.h>
 #include "PlantSpecies.h"
-//#include "PlantType.h"
 
 #include <CH/CH_Manager.h>
 
@@ -67,7 +66,6 @@ public:
 	// PLANT SOP FUNCTIONS
 	/// Initialize the actual plant based on the environment (root SOP_Branch)
 	void initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies, float worldTime);
-	//void initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantType> currSpecies, float worldTime);
 
 	/// Generate a prototype copy to store as an editable tree in a SOP_Branch
 	BranchPrototype*         copyPrototypeFromList(float lambda, float determ);
@@ -123,8 +121,8 @@ private:
 
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
 	float AGE(fpreal t)     { return evalFloat("plantAge", 0, t); }
-	float G1(fpreal t)      { return evalFloat("g1",       0, t); }
-	float G2(fpreal t)      { return evalFloat("g2",       0, t); }
+	//float G1(fpreal t)      { return evalFloat("g1",       0, t); }
+	//float G2(fpreal t)      { return evalFloat("g2",       0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -138,7 +136,6 @@ private:
 	/// ENVIRONMENTAL CONTROL
 	OBJ_Ecosystem* ecosystem;	 /// The ecosystem this was spawned in
 	PlantSpecies* plantSpecies;  /// The species info for this plant
-	//std::shared_ptr<PlantType> plantType;
 
 	/// CHILD NODES:
 	/// The root Branch Module of this tree

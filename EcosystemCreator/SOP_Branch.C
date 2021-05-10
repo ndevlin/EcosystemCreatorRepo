@@ -86,7 +86,14 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
 {
-	std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
+	//std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
+	
+	if (!plant) {
+		std::cout << "ERROR: Branch Sop must be initialized BY a Plant Sop" << std::endl;
+		addError(SOP_ERR_BADNODE, "Branch Sop must be initialized BY a Plant Sop");
+		return UT_ERROR_WARNING;
+	}
+	
 	fpreal now = context.getTime();
 	//flags().setTimeDep(false);
 
@@ -353,7 +360,6 @@ void SOP_Branch::setRootByAge(float time) {
 
 /// Disconnect and delete this SOP_Branch
 void SOP_Branch::destroySelf() {
-	// TODO Maybe also deleteData?
 	disconnectAllInputs();
 	disconnectAllOutputs();
 	unloadData();

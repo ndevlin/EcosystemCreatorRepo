@@ -106,7 +106,7 @@ static PRM_Template
 speciesItemTemplate[] =
 {
     PRM_Template(PRM_STRING, PRM_TYPE_DYNAMIC_PATH,  1, &speciesPlugName,
-		&speciesDefault, 0, 0, 0, &PRM_SpareData::objPath),
+		&speciesDefault, 0, 0, 0, &PRM_SpareData::sopPath),
 	//PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST,  1, &speciesPlugName,
 	//	&speciesDefault, 0, 0, 0, &PRM_SpareData::objPath),
     PRM_Template() // List terminator
@@ -407,7 +407,7 @@ OBJ_Ecosystem::cook(OP_Context &context) {
 OP_ERROR
 OBJ_Ecosystem::cookMyObj(OP_Context &context)
 {
-	std::cout << "ECO COOK START" << std::endl;
+	//std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
 
 	// TIME: Allow for the ecosystem age to also be impacted by the timeline, as well as the slider
@@ -456,7 +456,6 @@ SOP_Plant* OBJ_Ecosystem::createPlant(/*add position maybe*/) {
 
 /// Initializes a plant node in this ecosystem with a pre-selected species (usually called in Seeding)
 SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position maybe*/) {
-//SOP_Plant* OBJ_Ecosystem::createPlant(std::shared_ptr<PlantType> currSpecies /*add position maybe*/) {
 	OP_Node* node = createNode("PlantNode");
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
@@ -467,7 +466,7 @@ SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position m
 		newPlant->initPlant(this, currSpecies, worldAge);
 		addToMerger(newPlant);
 
-		node->moveToGoodPosition();
+		node->moveToGoodPosition(); // TODO remove for speed
 	}
 
 	return newPlant;
@@ -486,36 +485,26 @@ void OBJ_Ecosystem::setMerger(OP_Node* mergeNode) {
 
 /// Initialized a new PlantSpecies
 void OBJ_Ecosystem::initNewSpecies(fpreal t/* TODO add parameters*/) {
-	// Decide on a path
-	//UT_String path;
-	//getFullPath(path); // TODO to parent network maybe?
-	/// TODO change - Currently just the default
-	//speciesList.push_back(std::make_shared<PlantType>(path));
-
-
-	//OP_Node* psNode = getParent()->createNode("SingleSpecies");
+	// Create the Species node inside the ecosystem geometry
 	OP_Node* psNode = createNode("SingleSpecies");
 	if (!psNode) { std::cout << "PlantSpecies Node is Nullptr" << std::endl; }
 	else if (!psNode->runCreateScript())
 		std::cout << "PlantSpecies constructor error" << std::endl;
 	
+	// Making connections to the Species
 	PlantSpecies* plantSpec = (PlantSpecies*)psNode;
 	if (plantSpec) { 
-		//UT_String p;
-		//getFullPath(p);
-		//p += "/PlantNode1";
-		//plantSpec->tempPath(p);
 		speciesList.push_back(plantSpec); 
 	
+		// Add it to the species list
 		UT_String path;
 		plantSpec->getRelativePathTo(this, path);
-		//plantSpec->getFullPath(path);
 		
 		int specIdx = evalInt(speciesListName.getToken(), 0, t) - 1;
 		setStringInst(path, CH_STRING_LITERAL,
 			speciesPlugName.getToken(), &specIdx, 0, t);
-		//setData(const char *parmname, int vectori, fpreal t,
-		//	const PRM_DataItemHandle &val);
+
+		psNode->moveToGoodPosition();
 	}
 }
 
@@ -527,7 +516,7 @@ void OBJ_Ecosystem::initAndAddSpecies(fpreal t/* TODO add parameters*/) {
 }
 
 /// Choose a likely plant species to spawn based on current spawn location's climate features
-PlantSpecies* //std::shared_ptr<PlantType>//std::shared_ptr<PlantSpecies> 
+PlantSpecies*
 OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) {
 	// TODO randomly choose plantSpecies based on climate
 	if (!speciesList.empty()) {

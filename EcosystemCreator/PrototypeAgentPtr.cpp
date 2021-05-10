@@ -110,7 +110,7 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	rigName += "?proto";
 	rigName += std::to_string(PrototypeAgentPtr::protocount);
 	rigName += "rig";
-	std::cout << rigName << std::endl;
+	///std::cout << rigName << std::endl;
 	GU_AgentRigPtr rig = GU_AgentRig::addRig(rigName);
 
 	UT_StringArray names;

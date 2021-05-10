@@ -9,6 +9,7 @@
 
 namespace HDK_Sample {
 	class SOP_Branch;
+	class PlantSpeciesVariables;
 }
 using namespace HDK_Sample;
 
@@ -16,15 +17,6 @@ using namespace HDK_Sample;
 class BNode : public std::enable_shared_from_this<BNode>
 {
 public:
-	static float g1;
-	static float g2;
-
-	static void updateG1(float gVal);
-	static void updateG2(float gVal);
-
-	static float getG1();
-	static float getG2();
-
 	BNode();
 	BNode(BNode* other);
 	BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick, bool isRootNode = false);
@@ -42,6 +34,9 @@ public:
 	// Adjust all new age-based calculations - Called from module
 	void setAge(float changeInAge, 
 		std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay);
+
+	// Run through all related nodes and pass a pointer to the PlantSpecies data
+	void setPlantVars(PlantSpeciesVariables* vars);
 
 	// Getters for important variables
 	std::shared_ptr<BNode> getParent();
@@ -68,12 +63,17 @@ public:
 	void recTransformation(float ageDif, float radiusMultiplier, 
 		float lengthMultiplier, UT_Matrix3& rotation);
 
+protected:
+	PlantSpeciesVariables* getPlantVars();
+
 private:
 	// Every node has up to one parent, but may have outgoing connections to
 	// both nodes or modules
 	std::shared_ptr<BNode> parent;
 	std::vector<std::shared_ptr<BNode>> children;
 	std::vector<SOP_Branch*> connectedModules;
+
+	PlantSpeciesVariables* plantVars;
 
 	UT_Vector3 position;
 	UT_Vector3 unitDir;

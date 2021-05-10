@@ -12,21 +12,21 @@ bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 
 // Declaring parameters here
 static PRM_Name	plantAgeName("plantAge", "Plant Age");
-static PRM_Name	      g1Name("g1",       "Tropism Falloff"); /// TropismDecrease
-static PRM_Name	      g2Name("g2",       "TropismStrength");
+///static PRM_Name	      g1Name("g1",       "Tropism Falloff"); /// TropismDecrease
+///static PRM_Name	      g2Name("g2",       "Tropism Strength (temp)");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
 static PRM_Default plantAgeDefault(0, "0.0");
-static PRM_Default	     g1Default(1.0);
-static PRM_Default	     g2Default(-0.2);
+///static PRM_Default	     g1Default(1.0);
+///static PRM_Default	     g2Default(-0.2);
 
 // Set up the ranges for the parameter inputs here
 // TODO change maximum based on PlantSpecies max age
 //static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
-static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
-static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
+///static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
+///static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -34,9 +34,8 @@ static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 PRM_Template
 SOP_Plant::myTemplateList[] = {
 	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault),
-	//PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault, 0, &plantAgeRange),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
-	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
+	///PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
+	///PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
 	PRM_Template()
 };
 
@@ -71,9 +70,6 @@ SOP_Plant::evalVariableValue(fpreal &val, int index, int thread)
 		case VAR_PT:
 			val = (fpreal) myCurrPoint;
 			return true;
-		//case VAR_NPT:
-		//	val = (fpreal) myTotalPoints;
-		//	return true;
 		default:
 			/* do nothing */;
 		}
@@ -278,7 +274,7 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
-	: SOP_Node(net, name, op), ecosystem(nullptr), plantSpecies(nullptr),  //plantType(nullptr), //
+	: SOP_Node(net, name, op), ecosystem(nullptr), plantSpecies(nullptr),
 	rootModule(nullptr), merger(nullptr)
 {
 	createAndGetOperatorTable();
@@ -303,23 +299,23 @@ SOP_Plant::~SOP_Plant() {}
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
-	std::cout << "PLANT COOK START" << std::endl;
-	//if (!ecosystem) {
-	//	// If it was initialized in an ecosystem, but not BY ecosystem...
-	//	auto eco = dynamic_cast<OBJ_Ecosystem*>(getParent()->getOperator());
-	//	if (eco != NULL) {
-	//		// Update with the correct pointers and a RANDOM species
-	//		if (rootModule) { rootModule->destroySelf(); }
-	//		initPlant((OBJ_Ecosystem*)eco, eco->chooseSpecies(), eco->getAge());
-	//		eco->addToMerger(this);
-	//	}
-	//	// Else notify user of error
-	//	else {
-	//		std::cout << "ERROR: Plant Sop must be initialized inside an Ecosystem Geo" << std::endl;
-	//		addError(SOP_ERR_BADNODE, "Plant Sop must be initialized inside an Ecosystem Geo");
-	//		return UT_ERROR_WARNING;
-	//	}
-	//}
+	//std::cout << "PLANT COOK START" << std::endl;
+	if (!ecosystem) {
+		// If it was initialized in an ecosystem, but not BY ecosystem...
+		auto eco = dynamic_cast<OBJ_Ecosystem*>(getParent()->getOperator());
+		if (eco != NULL) {
+			// Update with the correct pointers and a RANDOM species
+			if (rootModule) { rootModule->destroySelf(); }
+			initPlant((OBJ_Ecosystem*)eco, eco->chooseSpecies(), eco->getAge());
+			eco->addToMerger(this);
+		}
+		// Else notify user of error
+		else {
+			std::cout << "ERROR: Plant Sop must be initialized inside an Ecosystem Geo" << std::endl;
+			addError(SOP_ERR_BADNODE, "Plant Sop must be initialized inside an Ecosystem Geo");
+			return UT_ERROR_WARNING;
+		}
+	}
 
 	fpreal now = context.getTime();
 	UT_Interrupt	*boss;
@@ -328,18 +324,15 @@ SOP_Plant::cookMySop(OP_Context &context)
 
 	// Get current plant-related values
 	//float ageVal;
-	float g1Val;
-	float g2Val;
+	///float g1Val;
+	///float g2Val;
 
 	//ageVal = AGE(now);
-	g1Val  = G1(now);
-	g2Val  = G2(now);
+	///g1Val  = G1(now);
+	///g2Val  = G2(now);
 
-	BNode::updateG1(g1Val);
-	BNode::updateG2(g2Val);
-	// TODO If we want to also add growth-coeff and thick-coeff as variables here?
-	// for thickness we would only need to rerun the traversal unless time also changes
-	// But this might be more of a prototype-designer sort of thing
+	///BNode::updateG1(g1Val);
+	///BNode::updateG2(g2Val);
 
 	// Check if custom plant age has been adjusted
 	//float diff = ageVal - plantAge;
@@ -368,7 +361,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 		// WARNING - does not update after you leave network until next cook
 		output = (SOP_Node*)getDisplayNodePtr();
 		if (output) {
-			std::cout << "P-Reached" << std::endl;
 			// TODO find a better way, "instance" it maybe
 			gdp->stashAll();
 			// WARNING - Plant cook encompasses all children cooks.
@@ -395,7 +387,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 	triggerOutputChanged();
 
     myCurrPoint = -1;
-	std::cout << "PLANT COOK END" << std::endl;
 	return error();
 }
 
@@ -415,16 +406,13 @@ SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interes
 ///////////////////// OUR FUNCTIONS FOR PLANT SOP MANAGEMENT ///////////////////
 
 /// Initialize the actual plant based on the environment (the root SOP_Branch)
-void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies,
-//void SOP_Plant::initPlant(OBJ_Ecosystem* eco, std::shared_ptr<PlantType> currSpecies,
-	float worldTime)
+void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies, float worldTime)
 {
 	ecosystem = eco;
 	plantBirthday = worldTime;
 
 	if (currSpecies) {
 		plantSpecies = currSpecies;
-		//plantType = currSpecies;
 
 		if (merger) {
 			// Create the root branch module
@@ -436,7 +424,6 @@ void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies,
 
 			if (branchNode_OP) {
 				SOP_Branch* branchNode = (SOP_Branch*)branchNode_OP;
-				//branchNode->setBypass(false);
 				setRootModule(branchNode);
 				addToMerger(branchNode);
 				branchNode_OP->moveToGoodPosition();
@@ -452,7 +439,6 @@ void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies,
 /// Generate a prototype copy to store as an editable tree in a SOP_Branch
 BranchPrototype* SOP_Plant::copyPrototypeFromList(float lambda, float determ) {
 	return plantSpecies->copyPrototypeFromList(lambda, determ);
-	//return plantType->copyPrototypeFromList(lambda, determ);
 }
 
 /// Add the corresponding node as an input to the stored merge node
