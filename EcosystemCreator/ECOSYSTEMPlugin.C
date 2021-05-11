@@ -121,8 +121,6 @@ OBJ_Ecosystem::myTemplateList[] = {
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &timeShiftName, &timeShiftDefault, 0, &timeShiftRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &temperatureName, &temperatureDefault, 0, &temperatureRange),
 	PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &rainfallName, &rainfallDefault, 0, &rainfallRange),
-	//PRM_Template(PRM_STRING_OPLIST, PRM_TYPE_DYNAMIC_PATH_LIST, 1, &speciesListName,
-	//	&speciesDefault, &speciesMenu, 0, 0, &PRM_SpareData::sopPath), // TODO fix spare
 	PRM_Template(PRM_MULTITYPE_LIST, speciesItemTemplate, 0, &speciesListName,
                 PRMzeroDefaults, 0, &PRM_SpareData::multiStartOffsetZero),
 	//PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &randomnessName, &randomnessDefault, 0, &randomnessRange),
@@ -208,8 +206,8 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!grid->runCreateScript())
 		std::cout << "Grid constructor error" << std::endl;
 
-	grid->setFloat("size", 0, 0.f, 60.f);
-	grid->setFloat("size", 1, 0.f, 60.f);
+	grid->setFloat("size", 0, 0.f, 50.f);
+	grid->setFloat("size", 1, 0.f, 50.f);
 
 	grid->moveToGoodPosition();
 
@@ -226,6 +224,10 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	groundColor->connectToInputNode(*grid, 0, 0);
 	groundColor->moveToGoodPosition();
 
+	groundColor->setFloat("color", 0, 0.f, 0.338f);
+	groundColor->setFloat("color", 1, 0.f, 0.563f);
+	groundColor->setFloat("color", 2, 0.f, 0.338f);
+
 
 	// Mountain to vary terrain
 	OP_Node* mountain = newEco->createNode("mountain");
@@ -240,15 +242,38 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	mountain->connectToInputNode(*groundColor, 0, 0);
 	mountain->moveToGoodPosition();
 
+	///
 
-	int index = 0;
+	// Scatter to create points
+	OP_Node* scatter = newEco->createNode("scatter");
+	if (!scatter)
+	{
+		std::cout << "Scatter is Nullptr" << std::endl;
+		return newEco;
+	}
+	else if (!scatter->runCreateScript())
+		std::cout << "Scatter constructor error" << std::endl;
+
+	scatter->connectToInputNode(*mountain, 0, 1);
+	newEco->setScatter(scatter);
+	//newEco->addToMerger(scatter);
+
+
+	/*for (int i = 0; i < 3/*newEco->numRandPlants()*//*; i++) {
+		SOP_Plant* newPlant = newEco->createPlant(newEco->chooseSpecies(),
+			UT_Vector3(i, 0.0f, 0.0f));
+	}*/
+
+	///
+
+	/*int index = 0;
 
 	int numTypes = newEco->numSpecies(); // 2;//3;
 
 	for (int i = 0; i < numTypes; i++)
 	{
 		// Initialize plant from current ecosystem parameters
-		//SOP_Plant* newPlant = newEco->createPlant(/*add position maybe*/);
+		//SOP_Plant* newPlant = newEco->createPlant();
 		SOP_Plant* newPlant = newEco->createPlant(newEco->getSpeciesAtIdx(i));
 
 		// Scatter to create points
@@ -287,9 +312,10 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		allTreesMergeNode->connectToInputNode(*treeCopyToPoints, index, 0);
 		index++;
 
-	}
+	}*/
 
-	allTreesMergeNode->connectToInputNode(*mountain, index, 0);
+	//allTreesMergeNode->connectToInputNode(*mountain, index, 0);
+	newEco->addToMerger(mountain);
 	allTreesMergeNode->moveToGoodPosition();
 	allTreesMergeNode->setVisible(true);
 
@@ -297,14 +323,15 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 }
 
 OBJ_Ecosystem::OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op)
-	: OBJ_Geometry(net, name, op), 
-		scatterNodes(), speciesList(), speciesLikelihood(), eco_merger(nullptr)
+	: OBJ_Geometry(net, name, op), scatterPoints(nullptr), //scatterNodes(), 
+		speciesList(), speciesLikelihood(), eco_merger(nullptr)
 {
     myCurrPoint = -1; // To prevent garbage values from being returned
 	worldAge = 0.0f;
 	worldTemp = 28.0f;
 	worldPrecip = 4100.0f;
 	totalPlants = 20.0f;
+	generatePlants = true;
 }
 
 OBJ_Ecosystem::~OBJ_Ecosystem() {}
@@ -332,6 +359,10 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 	//std::cout << "ECO COOK START" << std::endl;
 	fpreal now = context.getTime();
 
+	if (scatterPoints) {
+		addExtraInput(scatterPoints, OP_INTEREST_DATA);
+	}
+
 	// TIME: Allow for the ecosystem age to also be impacted by the timeline, as well as the slider
 	// HOWEVER: only using this just cooks on every NEW frame. Fixed in cook() above
 	flags().setTimeDep(true);
@@ -345,10 +376,20 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 	temperature = TEMPERATURE(now);
 	rainfall = RAINFALL(now);
 	///randomness = RANDOMNESS(now);
-
-	//rootModules.at(i)->temperature = temperature;
-	//rootModules.at(i)->rainfall = rainfall;
 	///BranchPrototype::setRandomness(randomness);
+
+	worldAge = AGE(now) + now;
+
+	// Display the total age in a disabled parameter so the user can see
+	setString(std::to_string(worldAge), CH_StringMeaning::CH_STRING_LITERAL,
+		"totalAge", 0, now);
+	enableParm("totalAge", false);
+
+	int newPointsNum = scatterPoints->evalInt("npts", 0, now);
+	if (newPointsNum != totalPlants) { 
+		generatePlants = true; 
+		totalPlants = newPointsNum;
+	} // TODO other scatter parms
 
 	// Also do if climate parameters of Plant Species change
 	if (abs(worldTemp - temperature) > 0.05 || abs(worldPrecip - rainfall) > 0.5) {
@@ -357,18 +398,61 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 
 		recalculateLikelihood();
 
-		for (int i = 0; i < scatterNodes.size(); i++) {
-			scatterNodes.at(i)->setInt("npts", 0, 0.f,
-				int(round(numRandPlants() * getLikelihoodAtIdx(i))));
+		//for (int i = 0; i < scatterNodes.size(); i++) {
+		//	scatterNodes.at(i)->setInt("npts", 0, 0.f,
+		//		int(round(numRandPlants() * getLikelihoodAtIdx(i))));
+		//}
+		reloadPlants = true;
+	}
+	if (reloadPlants && !generatePlants) {
+		reloadPlants = false;
+
+		OP_NodeList allChildNodes;
+		getAllChildren(allChildNodes);
+
+		// Update all existing plants with new species types
+		for (OP_Node* child : allChildNodes) {
+			auto plant_cast = dynamic_cast<SOP_Plant*>(child);
+			if (plant_cast != NULL) {
+				plant_cast->initPlant(this, chooseSpecies(), plant_cast->getBirthTime());
+			}
 		}
 	}
+	else if (generatePlants) {
+		generatePlants = false;
 
-	worldAge = AGE(now) + now;
-	
-	// Display the total age in a disabled parameter so the user can see
-	setString(std::to_string(worldAge), CH_StringMeaning::CH_STRING_LITERAL, 
-		"totalAge", 0, now);
-	enableParm("totalAge", false);
+		OP_NodeList allChildNodes;
+		getAllChildren(allChildNodes);
+
+		// Get positions from the scatter node
+		const GU_Detail* scatteredP = scatterPoints->getCookedGeo(context);
+
+		GA_Range range = scatteredP->getPointRange();
+		GA_Iterator it = range.begin();
+
+		// Browse each child of ecosystem, only act on SOP Plants
+		for (OP_Node* child : allChildNodes) {
+			auto plant_cast = dynamic_cast<SOP_Plant*>(child);
+			if (plant_cast != NULL) {
+				// It we still have points from scatter to set, reset existing plants
+				if (!it.atEnd()) {
+					plant_cast->initPlant(this, chooseSpecies(), 
+						plant_cast->getBirthTime());
+
+					plant_cast->setPosition(scatteredP->getPos3(*it));
+					++it;
+				}
+				// Otherwise, delete the spare plants
+				else { plant_cast->destroySelf(); }
+			}
+		}
+
+		// If we still didn't hit the end of points, keep generating more plants
+		while (!it.atEnd()) {
+			createPlant(scatteredP->getPos3(*it)); // WARNING will be initialized at present age
+			++it;
+		}
+	}
 
 	// Run geometry cook, needed to process primitive inputs
 	OP_ERROR    errorstatus;
@@ -397,13 +481,25 @@ void OBJ_Ecosystem::addToMerger(OP_Node* pNode) {
 	}
 }
 
+/// Store a reference to this node as the plant origin points sop
+void OBJ_Ecosystem::setScatter(OP_Node* scNode) {
+	scatterPoints = (SOP_Node*)scNode;
+
+	if (scatterPoints) {
+		scatterPoints->setFloat("seed", 0, 0.f, ((float)rand() / RAND_MAX) * 10.f);
+		scatterPoints->setInt("npts", 0, 0.f, numRandPlants());
+
+		scatterPoints->moveToGoodPosition();
+	}
+}
+
 /// Initializes a plant node in this ecosystem using a randomly chosen species
-SOP_Plant* OBJ_Ecosystem::createPlant(/*add position maybe*/) {
-	return createPlant(chooseSpecies());
+SOP_Plant* OBJ_Ecosystem::createPlant(UT_Vector3 origin) {
+	return createPlant(chooseSpecies(), origin);
 }
 
 /// Initializes a plant node in this ecosystem with a pre-selected species (usually called in Seeding)
-SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position maybe*/) {
+SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies, UT_Vector3 origin) {
 	OP_Node* node = createNode("PlantNode");
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
@@ -412,6 +508,7 @@ SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies /*add position m
 	SOP_Plant* newPlant = (SOP_Plant*)node;
 	if (newPlant) {
 		newPlant->initPlant(this, currSpecies, worldAge);
+		newPlant->setPosition(origin);
 		addToMerger(newPlant);
 
 		node->moveToGoodPosition(); // TODO remove for speed
@@ -518,10 +615,16 @@ OBJ_Ecosystem::chooseSpecies(/* TODO use enviro parameters at curr location */) 
 	// TODO randomly choose plantSpecies based on climate variables and likelihood list
 	// TODO later, should really move to a map
 	if (!speciesList.empty()) {
-		//float r = (float)rand() / RAND_MAX;
-		//float total = 0.0f;
+		float r = (float)rand() / RAND_MAX;
+		float currPartition = 0.0f;
 
+		for (int i = 0; i < speciesLikelihood.size(); i++) {
+			currPartition += speciesLikelihood.at(i);
 
+			if (r < currPartition) {
+				return speciesList.at(i);
+			}
+		}
 		return speciesList.at(0);
 	}
 	return nullptr;

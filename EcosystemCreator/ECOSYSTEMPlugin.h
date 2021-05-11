@@ -41,9 +41,12 @@ public:
 	void                     addToMerger(OP_Node* pNode);
 	// TODO: confirm that a remove-from-merge function is unneded
 
+	/// Store a reference to this node as the plant origin points sop
+	void                     setScatter(OP_Node* scNode);
+
 	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
-	SOP_Plant* createPlant(/*add position maybe*/);
-	SOP_Plant* createPlant(PlantSpecies* currSpecies /*add position maybe*/);
+	SOP_Plant* createPlant(UT_Vector3 origin = UT_Vector3());
+	SOP_Plant* createPlant(PlantSpecies* currSpecies, UT_Vector3 origin = UT_Vector3());
 			// TODO, seeding (in SOP_Plant)
 
 	/// Choose a likely plant species to spawn based on current spawn location's climate features
@@ -51,7 +54,7 @@ public:
 
 	// TODO - TEMPORARY saving scatter to update with climate-based likelihood
 	// correspond to speciesList above
-	std::vector<OP_Node*> scatterNodes;
+	//std::vector<OP_Node*> scatterNodes;
 
 protected:
 
@@ -113,6 +116,10 @@ private:
 	std::vector<float> speciesLikelihood;
 
 	OP_Node* eco_merger;
+	SOP_Node* scatterPoints;
+
+	bool reloadPlants;
+	bool generatePlants;
 };
 } // End HDK_Sample namespace
 

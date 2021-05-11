@@ -74,12 +74,21 @@ public:
 	void                     addToMerger(SOP_Branch* bMod);
 	// TODO: confirm that a remove-from-merge function is unneded
 
+	/// Sets the world space plant position
+	void                     setPosition(UT_Vector3 origin);
+	UT_Vector3               getPosition();
+
 	/// Get the age of this plant - used in child SOP_Branches
-	float                    getAge();
+	float                    getAge() const;
+	/// Get the birth of this plant
+	float                    getBirthTime() const;
 	/// Calculate the age impacted by growth rate
 	float                    calcWeightedAge();
 	/// Get the change in age - only works mid-cook
 	float                    getChangeInAge();
+
+	/// Disconnect and delete this Plant
+	void				     destroySelf();
 
 protected:
 
@@ -132,6 +141,7 @@ private:
     int	  myCurrPoint;
 
 	/// PLANT
+	UT_Vector3 plantPos;
 	float plantAge;		 /// The plant's age as compared to Ecosystem age and birthday
 	float plantBirthday; /// The age the ecosystem was when the plant spawned
 

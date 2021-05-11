@@ -305,7 +305,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 		auto eco = dynamic_cast<OBJ_Ecosystem*>(getParent()->getOperator());
 		if (eco != NULL) {
 			// Update with the correct pointers and a RANDOM species
-			if (rootModule) { rootModule->destroySelf(); }
 			initPlant((OBJ_Ecosystem*)eco, eco->chooseSpecies(), eco->getAge());
 			eco->addToMerger(this);
 		}
@@ -397,6 +396,8 @@ SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interes
 /// Initialize the actual plant based on the environment (the root SOP_Branch)
 void SOP_Plant::initPlant(OBJ_Ecosystem* eco, PlantSpecies* currSpecies, float worldTime)
 {
+	if (rootModule) { rootModule->destroySelf(); }
+
 	ecosystem = eco;
 	plantBirthday = worldTime;
 
@@ -440,9 +441,22 @@ void SOP_Plant::addToMerger(SOP_Branch* bMod) {
 	}
 }
 
+void SOP_Plant::setPosition(UT_Vector3 origin) {
+	plantPos = origin;
+}
+
+UT_Vector3 SOP_Plant::getPosition() {
+	return plantPos;
+}
+
 /// Get the age of this plant
-float SOP_Plant::getAge() {
+float SOP_Plant::getAge() const {
 	return plantAge;
+}
+
+/// Get the age of this plant
+float SOP_Plant::getBirthTime() const {
+	return plantBirthday;
 }
 
 /// Calculate the age impacted by growth rate
@@ -472,7 +486,7 @@ void SOP_Plant::setRootModule(SOP_Branch* node) {
 
 	if (rootModule) {
 		rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
-		rootModule->setAge(0.0f);
+		rootModule->setAge(calcWeightedAge());//0.0f);
 	}
 }
 
@@ -581,4 +595,16 @@ SOP_Plant::getNumVisibleInputs() const {
 unsigned
 SOP_Plant::getNumVisibleOutputs() const {
 	return 1;
+}
+
+/// Disconnect and delete this Plant
+void SOP_Plant::destroySelf() {
+	if (rootModule) { rootModule->destroySelf(); }
+	if (merger)     { destroyNode(merger); }
+	if (output)     { destroyNode(output); }
+
+	disconnectAllInputs();
+	disconnectAllOutputs();
+	unloadData();
+	ecosystem->destroyNode(this);
 }

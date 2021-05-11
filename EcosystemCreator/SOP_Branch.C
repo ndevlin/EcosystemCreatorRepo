@@ -62,7 +62,13 @@ SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
     myCurrPoint = -1;	// To prevent garbage values from being returned
 }
 
-SOP_Branch::~SOP_Branch() {}
+SOP_Branch::~SOP_Branch() {
+	for (SOP_Branch* childModule : childModules) {
+		childModule->destroySelf();
+		// TODO remove from parent list too - currently happens in SOP_Branch::setAge
+	}
+	childModules.clear();
+}
 
 unsigned
 SOP_Branch::disableParms()
@@ -123,11 +129,10 @@ SOP_Branch::cookMySop(OP_Context &context)
 			/// UPDATE AGE
 			// Can do this comparison now because Plant sets it's age AFTER the 
 			// child sop branch modules finish cooking. If that changes, fix here
-			if (plant) { // To be safe
+			
+			if (plant && prototype) { // To be safe
 				setAge(plant->getChangeInAge());
-			}
 
-			if (prototype) {
 				/// CREATE AN AGENT FOR EACH BRANCH MODULE
 				//if (init_agent) {
 				init_agent = false;
@@ -135,11 +140,11 @@ SOP_Branch::cookMySop(OP_Context &context)
 				GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
 				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
 				GA_Offset ptoff = pointModule->getPointOffset(0);
-				UT_Vector3 pt;
-				pt(0) = 0.0;
-				pt(1) = 0.0;
-				pt(2) = 0.0;
-				gdp->setPos3(ptoff, pt);
+				//UT_Vector3 pt;
+				//pt(0) = 0.0;
+				//pt(1) = 0.0;
+				//pt(2) = 0.0;
+				gdp->setPos3(ptoff, plant->getPosition());
 
 				// TEST
 				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
