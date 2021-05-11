@@ -43,8 +43,8 @@ private:
 	float pMax; /// Max age
 	float gp;   /// Growth Rate
 
-	float g1;
-	float g2;
+	float g1;   /// Tropism decrease by age
+	float g2;   /// Tropism strength overall
 
 	float beta; /// Scaling Coefficient
 	float tC;	/// Thickening Coefficent
@@ -117,10 +117,12 @@ private:
 	const char* pathToParent;
 
 	// TODO store *ecosystem, notify when temp and rainfall change, regenerate random scene
+	// set reloadPlants to true in recalculateLikelihood() func
 
 	PrototypeSet* prototypeSet; // TODO Make unique pointer
 	PlantSpeciesVariables vars;
 
+	// WARNING: The effects of changing these only takes place after recooking ecosystem
 	float tempA;   /// Optimal habitat temperature 
 	float precipA; /// Optimal habitat precipitation
 };

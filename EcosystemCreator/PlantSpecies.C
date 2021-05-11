@@ -1,4 +1,5 @@
 #include "PlantSpecies.h"
+#include "ECOSYSTEMPlugin.h"
 
 using namespace HDK_Sample;
 
@@ -98,6 +99,7 @@ void PlantSpecies::initWithParameters(int defaultSpeciesType,
 
 	vars.setGP(growthRate);
 	setFloat("growthRate", 0, 0.f, growthRate);
+	enableParm("growthRate", false); // TODO fix
 
 	vars.setG1(g1Init);
 	setFloat("g1", 0, 0.f, g1Init);
@@ -136,11 +138,15 @@ PlantSpecies::cookMySop(OP_Context &context)
 	vars.setTC(TC(now));
 
 	// IF THESE-> notify ecosystem to rebuild
-	tempA = TEMPERATURE(now);
-	precipA = RAINFALL(now);
-	// TODO If we want to also add growth-coeff and thick-coeff as variables here?
-	// for thickness we would only need to rerun the traversal unless time also changes
-	// But this might be more of a prototype-designer sort of thing
+	float newTemp = TEMPERATURE(0.0f);
+	float newPrecip = RAINFALL(0.0f);
+
+	if (abs(tempA - newTemp) > 0.05 || abs(precipA - newPrecip) > 0.5) {
+		tempA = newTemp;
+		precipA = newPrecip;
+		((OBJ_Ecosystem*)getParent())->recalculateLikelihood();
+	}
+
 	return error();
 }
 
@@ -178,8 +184,8 @@ PlantSpecies::nodeEventHandler(
 void
 PlantSpecies::handleParmChanged(int parm_index)
 {
-    // TODO change based on which parm 
-	// - also connect as input to relevant plants so that this cooks instead
+    // TODO change based on which parm_index
+	// - maybe connect as input to relevant plants so that this "cooks" instead
 	vars.setPMax(MAXAGE(0.0f));
 	vars.setGP(GROWTH(0.0f));
 
@@ -190,17 +196,14 @@ PlantSpecies::handleParmChanged(int parm_index)
 	vars.setTC(TC(0.0f));
 
 	// IF THESE-> notify ecosystem to rebuild
-	tempA = TEMPERATURE(0.0f);
-	precipA = RAINFALL(0.0f);
+	float newTemp = TEMPERATURE(0.0f);
+	float newPrecip = RAINFALL(0.0f);
 
-	// Thankfully it still updates Plants
-
-	//triggerUIChanged(OP_UICHANGE_CONNECTIONS);
-	//triggerOutputChanged();
-	//forceRecook(true);
-	//getParmIndex
-	//getParmPtrInst
-	//triggerParmCallback
+	if (abs(tempA - newTemp) > 0.05 || abs(precipA - newPrecip) > 0.5) {
+		tempA   = newTemp;
+		precipA = newPrecip;
+		((OBJ_Ecosystem*) getParent())->recalculateLikelihood();
+	}
 }
 
 // Get the optimal temperature variable

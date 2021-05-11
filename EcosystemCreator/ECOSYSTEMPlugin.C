@@ -385,25 +385,21 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 		"totalAge", 0, now);
 	enableParm("totalAge", false);
 
+	// Get the number of points at which to instance trees
 	int newPointsNum = scatterPoints->evalInt("npts", 0, now);
 	if (newPointsNum != totalPlants) { 
 		generatePlants = true; 
 		totalPlants = newPointsNum;
-	} // TODO other scatter parms
+	}
 
-	// Also do if climate parameters of Plant Species change
+	// If climate parameters changed...
 	if (abs(worldTemp - temperature) > 0.05 || abs(worldPrecip - rainfall) > 0.5) {
 		worldTemp = temperature;
 		worldPrecip = rainfall;
 
-		recalculateLikelihood();
-
-		//for (int i = 0; i < scatterNodes.size(); i++) {
-		//	scatterNodes.at(i)->setInt("npts", 0, 0.f,
-		//		int(round(numRandPlants() * getLikelihoodAtIdx(i))));
-		//}
-		reloadPlants = true;
+		recalculateLikelihood(); /// sets reloadPlants to true
 	}
+	// Change existing plant sop species to correspond
 	if (reloadPlants && !generatePlants) {
 		reloadPlants = false;
 
@@ -418,8 +414,10 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 			}
 		}
 	}
+	// If the number of plants has changed, deal with it here
 	else if (generatePlants) {
 		generatePlants = false;
+		reloadPlants = false;
 
 		OP_NodeList allChildNodes;
 		getAllChildren(allChildNodes);
@@ -449,7 +447,7 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 
 		// If we still didn't hit the end of points, keep generating more plants
 		while (!it.atEnd()) {
-			createPlant(scatteredP->getPos3(*it), false); // WARNING will be initialized at present age
+			createPlant(scatteredP->getPos3(*it), false);
 			++it;
 		}
 	}
@@ -655,4 +653,6 @@ void OBJ_Ecosystem::recalculateLikelihood() {
 			speciesLikelihood.at(i) /= total;
 		}
 	}
+
+	reloadPlants = true;
 }

@@ -39,23 +39,24 @@ public:
 
 	/// Add the corresponding node to the group output geometry
 	void                     addToMerger(OP_Node* pNode);
-	// TODO: confirm that a remove-from-merge function is unneded
 
 	/// Store a reference to this node as the plant origin points sop
 	void                     setScatter(OP_Node* scNode);
 
 	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
-	SOP_Plant* createPlant(UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
-	SOP_Plant* createPlant(PlantSpecies* currSpecies, 
-		UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
-			// TODO, seeding (in SOP_Plant)
+	SOP_Plant*				 createPlant(UT_Vector3 origin = UT_Vector3(), 
+								bool setNewBirthday = true);
+	SOP_Plant*				 createPlant(PlantSpecies* currSpecies, 
+								UT_Vector3 origin = UT_Vector3(),
+								bool setNewBirthday = true);
+									// TODO, seeding (in SOP_Plant)
 
 	/// Choose a likely plant species to spawn based on current spawn location's climate features
-	PlantSpecies* chooseSpecies(/* TODO use enviro parameters at curr location */);
+	PlantSpecies* chooseSpecies(/* TODO Allow for temp shifts based on position */);
 
-	// TODO - TEMPORARY saving scatter to update with climate-based likelihood
-	// correspond to speciesList above
-	//std::vector<OP_Node*> scatterNodes;
+	/// Computes the likelihood (float between 0-1) for each species that it would
+	/// spawn in this climate
+	void recalculateLikelihood();
 
 protected:
 
@@ -76,11 +77,11 @@ protected:
 	void setMerger(OP_Node* mergeNode);
 
 	/// Initialized a new PlantSpecies
-	void initNewSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+	void initNewSpecies(fpreal t, /* Specific parameters: */ int defaultSpeciesType = 0,
 		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
 		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
 	
-	void initAndAddSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+	void initAndAddSpecies(fpreal t, /* Specific parameters: */ int defaultSpeciesType = 0,
 		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
 		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
 
@@ -93,8 +94,6 @@ protected:
 	int numRandPlants() const;
 
 private:
-	void recalculateLikelihood();
-
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
 	float AGE(fpreal t)         { return evalFloat("timeShift", 0, t); }
 	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
