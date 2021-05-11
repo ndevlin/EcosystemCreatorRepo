@@ -50,7 +50,6 @@ BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick, b
 
 BNode::~BNode() {
 	if (this->parent != nullptr) {
-		// TODO remove this from parent list prob
 	}
 	for (std::shared_ptr<BNode> child : children) {
 		child->setParent(nullptr);
@@ -58,13 +57,11 @@ BNode::~BNode() {
 	}
 	for (SOP_Branch* connectedModule : connectedModules) {
 		connectedModule->destroySelf();
-		// TODO remove from parent list too - currently happens in SOP_Branch::setAge
 	}
 }
 
 std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
 	std::shared_ptr<BNode> newNode(new BNode(this));
-	//std::shared_ptr<BNode> newNode = std::make_shared<BNode>(this); // Uses custom copy constructor? TODO check
 	newNode->setParent(par);
 
 	for (std::shared_ptr<BNode> child : children) {
@@ -103,16 +100,11 @@ void BNode::setAge(float changeInAge,
 	
 	// For full branch-segments only, update length and position:
 	else if (parent) {
-		// TODO make this a more smooth curve, slow down over time
 		float branchLength = min(maxLength, age * plantVars->getBeta());
-		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
-		branchLength = branchLength * branchLength * (3 - 2 * branchLength);
-		branchLength = (max(min(branchLength, 1.0f), 0.5f) - 0.5f) * 2.0f * maxLength;*/
 
 		position = parent->getPos() + branchLength * unitDir;
 
 		// Calculate tropism offset using  static values
-		// TODO, just get a pointer to plant in BNode so that this isnt the same for all plants
 		float g1 = pow(0.95f, age * plantVars->getG1());   // Controls tropism decrease over time
 		float g2 = -plantVars->getG2();                    // Controls tropism strength
 		UT_Vector3 gDir = UT_Vector3(0.0f, -1.0f, 0.0f);  // Gravity Direction
@@ -125,26 +117,23 @@ void BNode::setAge(float changeInAge,
 	// Branch thickness update:
 	thickness = max(0.015f, age * baseRadius * plantVars->getTC());
 	// There's an age difference of 1 between terminal nodes and their children
-	// This is how I've decided to deal with it for now
+	// This is how I've decided to deal with it
 	if (parent && isRoot()) { thickness = parent->getThickness(); }
-	// TODO maybe only if this is the first of the terminal's childModule array
 
 	// Update children
 	for (std::shared_ptr<BNode> child : children) {
 		child->setAge(changeInAge, terminalNodes, mature, decay);
 	}
 
-	if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {
-		// TODO base addition on vigor
+	if (mature && children.empty() && connectedModules.empty()) {
 		terminalNodes.push_back(shared_from_this());
 	}
-	// Clear/cull modules if it is not mature (rewinding of time) or TODO if vigor drops too low
+	// Clear/cull modules if it is not mature (rewinding of time)
 	else if (decay && !connectedModules.empty()) {
 		for (SOP_Branch* connectedMod : connectedModules) {
 			connectedMod->destroySelf();
 		}
 		connectedModules.clear();
-		// TODO The parent array is cleared in SOP_Branch::setAge(). Maybe move that here
 	}
 }
 
@@ -205,14 +194,6 @@ void BNode::setRigIndex(int idx)
 	rigIndex = idx;
 }
 
-
-/* BNode::getWorldTransform() {
-	if (isRoot() || !parent) {
-		return getLocalTransform();
-	}
-	return getLocalTransform() * parent->getWorldTransform();
-}*/
-
 UT_Matrix4 BNode::getWorldTransform() {
 	UT_Matrix4 transform = UT_Matrix4(1.0f);
 	UT_Vector3 c = UT_Vector3();
@@ -237,12 +218,9 @@ UT_Matrix4 BNode::getWorldTransform() {
 
 		transform = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
 			parentDir, c, 1));
-		// TODO append own Dir
 	}
 
 	else {
-		//if (parent->getParent()) { parentDir = parent->getPos() - parent->getParent()->getPos(); }
-		//else					 { parentDir = parent->getDir(); }
 
 		UT_Vector3 currDir = position - parent->getPos();
 		transform = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
@@ -251,58 +229,6 @@ UT_Matrix4 BNode::getWorldTransform() {
 	transform.setTranslates(position);
 	return transform;
 }
-
-/*UT_Matrix4 BNode::getLocalTransform() {
-	UT_Matrix4 translate = UT_Matrix4(1.0f);
-	UT_Vector3 c = UT_Vector3();
-
-	if (!parent) {
-		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
-			getDir(), c, 1));
-		translate.setTranslates(position);
-		return translate;
-	}
-
-	// Getting the angle of the parent branch segment
-	UT_Vector3 parentDir;
-	if (!parent->isRoot() && parent->getParent()) { 
-		parentDir = parent->getPos() - parent->getParent()->getPos(); 
-	}
-	else if (parent->isRoot() && parent->getParent() && parent->getParent()->getParent()) {
-		// Skipping the terminal node since it's located in the same place as the root node
-		parentDir = parent->getPos() - parent->getParent()->getParent()->getPos();
-	}
-	else { parentDir = parent->getDir(); }
-	//parentDir.normalize();
-
-	if (isRoot()) {
-		translate = UT_Matrix4(UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f), 
-			parentDir, c, 1));
-		// TODO append own Dir
-		translate.setTranslates(position);
-		return translate;
-	}
-
-	// Getting the angle of the current branch segment
-	UT_Vector3 currDir = position - parent->getPos();
-	translate.setTranslates(UT_Vector3(0.0f, currDir.length(), 0.0f));
-	//currDir.normalize();
-
-	UT_Matrix3 orientation3;// = UT_Matrix3::dihedral(parentDir, currDir, c, 1);
-	
-	float angle = parentDir.angleTo(currDir);
-	UT_Vector3 axisOfRot = cross(parentDir, currDir);
-	// TODO check clockwise
-	axisOfRot.normalize();
-	UT_Quaternion quatRot = UT_Quaternion(angle, axisOfRot);
-	quatRot.getRotationMatrix(orientation3);
-
-	UT_Matrix4 transform = UT_Matrix4(orientation3);
-	transform.preMultiply(translate);
-	//transform *= translate;
-
-	return transform;
-}*/
 
 /// More forms of updating
 void BNode::recTransformation(float ageDif, float radiusMultiplier, 

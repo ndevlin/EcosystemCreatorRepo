@@ -7,7 +7,7 @@ int HDK_Sample::branchIDnum = 0;
 // Declaring parameters here
 PRM_Template
 SOP_Branch::myTemplateList[] = {
-	// No custom parameters at the post-prototype branch level (as of now)
+	// No custom parameters at the post-prototype branch level
 	PRM_Template()
 };
 
@@ -65,7 +65,6 @@ SOP_Branch::SOP_Branch(OP_Network *net, const char *name, OP_Operator *op)
 SOP_Branch::~SOP_Branch() {
 	for (SOP_Branch* childModule : childModules) {
 		childModule->destroySelf();
-		// TODO remove from parent list too - currently happens in SOP_Branch::setAge
 	}
 	childModules.clear();
 }
@@ -91,9 +90,7 @@ void drawSphereAtEachNode(GU_Detail* gdp, std::shared_ptr<BNode> currNode) {
 /// Does the actual work of the SOP Branch computing
 OP_ERROR
 SOP_Branch::cookMySop(OP_Context &context)
-{
-	//std::cout << "__BRANCH" + std::to_string(branchID) + " start" << std::endl;
-	
+{	
 	if (!plant) {
 		std::cout << "ERROR: Branch Sop must be initialized BY a Plant Sop" << std::endl;
 		addError(SOP_ERR_BADNODE, "Branch Sop must be initialized BY a Plant Sop");
@@ -101,7 +98,6 @@ SOP_Branch::cookMySop(OP_Context &context)
 	}
 	
 	fpreal now = context.getTime();
-	//flags().setTimeDep(false);
 
     UT_Interrupt	*boss;
 	myCurrPoint = 0;		// Initialize the PT local variable
@@ -134,27 +130,14 @@ SOP_Branch::cookMySop(OP_Context &context)
 				setAge(plant->getChangeInAge());
 
 				/// CREATE AN AGENT FOR EACH BRANCH MODULE
-				//if (init_agent) {
 				init_agent = false;
 
 				GU_PrimPoly* pointModule = GU_PrimPoly::build(gdp, 1, GU_POLY_OPEN);
-				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
 				GA_Offset ptoff = pointModule->getPointOffset(0);
-				//UT_Vector3 pt;
-				//pt(0) = 0.0;
-				//pt(1) = 0.0;
-				//pt(2) = 0.0;
+
 				gdp->setPos3(ptoff, plant->getPosition());
 
-				// TEST
-				//gdp->destroyPrimitives(gdp->getPrimitiveRange());
-				//GA_Offset ptoff2;
-				//for (GA_Offset ptoff3 : gdp->getPointRange()) {
-				//	ptoff2 = ptoff3;
-				//	break;
-				//}
-
-				packedPrim = GU_Agent::agent(*gdp, ptoff);//2);
+				packedPrim = GU_Agent::agent(*gdp, ptoff);
 				gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
 				gdp->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
 				gdp->getPrimitiveList().bumpDataId();
@@ -163,8 +146,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 				GA_RWHandleS name_attr(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE, "name", 1));
 
 				moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-				//}
-				//if (change_agent) {
+
 				change_agent = false;
 				int currIdx = prototype->getIdxAtTimestep(root->getAge());
 				GU_AgentDefinitionPtr ptrTemp = prototype->getAgentDefAtIdx(currIdx);
@@ -182,22 +164,7 @@ SOP_Branch::cookMySop(OP_Context &context)
 					agentName.buffer(), 0);
 				name_attr.set(packedPrim->getMapOffset(), currName.buffer());
 
-				//moduleAgent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-				gdp->getPrimitiveList().bumpDataId();/**/
-
-				// Testing ideal joint locations
-				///drawSphereAtEachNode(gdp, root);
-
-				// Way to get center of bounding sphere:
-				///UT_BoundingBox bbox;
-				///moduleAgent->getBounds(bbox);
-				///UT_Vector3 center = (bbox.minvec() + bbox.maxvec()) * 0.5f;
-				///float radius = (bbox.maxvec() - bbox.minvec()).length() * 0.5f;
-				///
-				///GU_PrimSphereParms sphere(gdp);
-				///sphere.xform.scale(radius, radius, radius);
-				///sphere.xform.translate(center);
-				///GU_PrimSphere::build(sphere, GEO_PRIMSPHERE);
+				gdp->getPrimitiveList().bumpDataId();
 			}
 
 			// Clear any highlighted geometry and highlight the primitives we generated.
@@ -210,7 +177,6 @@ SOP_Branch::cookMySop(OP_Context &context)
 	triggerOutputChanged();
 
     myCurrPoint = -1;
-	//std::cout << "__BRANCH" + std::to_string(branchID) + " end" << std::endl;
     return error();
 }
 
@@ -218,7 +184,6 @@ SOP_Branch::cookMySop(OP_Context &context)
 //////////////////// OUR FUNCTIONS FOR BRANCH SOP MANAGEMENT ///////////////////
 
 /// Important: updates all time-based values in all modules. Does all main calculations
-// TODO as we do this, propogate the vigor (from the last cook or precalculated) upwards
 void SOP_Branch::setAge(float changeInAge) {
 	if (prototype) {
 		float newAge = changeInAge + root->getAge();
@@ -241,12 +206,9 @@ void SOP_Branch::setAge(float changeInAge) {
 		float ageDif = newAge - root->getAge(); /// Only use for these BNodes
 
 		// if mature, get terminal nodes to connect to with more modules
-		//std::vector<BNode*> terminalNodes = std::vector<BNode*>();
 		std::vector<std::shared_ptr<BNode>> terminalNodes = std::vector<std::shared_ptr<BNode>>();
-		//std::vector<SOP_Branch*> newModules = std::vector<SOP_Branch*>();
 
 		// Set the present age along the tree and adjusts current point calculations
-		// TODO calculate and use growth rate later
 		root->setAge(ageDif, terminalNodes, mature, decay);
 
 		if (mature) { // - unneccessary double check
@@ -257,16 +219,12 @@ void SOP_Branch::setAge(float changeInAge) {
 				if (!newModule) { std::cout << "Branch Node is Nullptr" << std::endl; }
 				else if (!newModule->runCreateScript()) { std::cout << "Branch constuction error" << std::endl; }
 
-				// TODO: set lambda and determ properly
 				// WARNING, when swapping the order of this, real plant age would be plant->getAge() - changeInAge
 				newModule->setPlantAndPrototype(plant, plant->getAge() / 8.f, plant->getAge() / 8.f);
 				newModule->setParentModule(this, termNodeAge, terminalNode);
 				newModule->setInput(0, this);
 				plant->addToMerger(newModule);
-				// Doesn't cook this round even with forceRecook :/
-
-				// TODO maybe add specific rendering pipelines here
-				//OP_Node* colorNode = plant->createNode("color");
+				// Doesn't cook this round even with forceRecook
 
 				terminalNode->addModuleChild(newModule);
 				childModules.push_back(newModule);
@@ -275,24 +233,7 @@ void SOP_Branch::setAge(float changeInAge) {
 		else if (decay && !childModules.empty()) {
 			childModules.clear(); // actual destruction is handled in BNode
 		}
-
-		// TODO, go through new Modules and run optimize orientation steps
-		// Based on bounding volumes. maybe use commented-out newModules vector
 	}
-
-	// Recurse
-	//for (SOP_Branch* child : childModules) {
-	//	child->setAge(changeInAge);
-	//}
-
-	// Now add flux calculations here ^ while the recursion returns to the root
-	// Needs functioning bounding volumes first. Outline:
-	// have setAge return flux
-	//  - sum all intersecting volumes for each module
-	//  - use exponential decay on the negative of that summation to calculate exposure
-	//  - sum this flux at each branching point until we reach root
-
-	// Then vigor distribution. Be mindful of maxes and mins. Establish apical control variables
 }
 
 /// Set up plant pointer, selected prototype data, and initializes root and ageRange
@@ -319,13 +260,10 @@ void SOP_Branch::setParentModule(SOP_Branch* parModule, float newAge,
 				prototype->getRootAtIdx(0)->getBaseRadius();
 		}
 
-		// TODO add random Y rotation
-
 		// Get starting orientation of model based off of parent branch
 		UT_Vector3 c = UT_Vector3();
 		UT_Matrix3 transform = UT_Matrix3::dihedral(UT_Vector3(0.0f, 1.0f, 0.0f),
 			connectingNode->getDir(), c, 1);
-		// TODO^ good starting point and will then get replaced by placement optimization
 
 		// Update the values for each prototype age
 		for (int i = 0; i < prototype->getNumAges(); i++) {
@@ -369,3 +307,4 @@ void SOP_Branch::destroySelf() {
 	unloadData();
 	plant->destroyNode(this);
 }
+

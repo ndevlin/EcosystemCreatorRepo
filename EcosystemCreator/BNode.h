@@ -23,7 +23,6 @@ public:
 	BNode(vec3 start, vec3 end, float branchAge, float length, float thick, bool isRootNode = false);
 	~BNode();
 
-	// TODO wow the lack of const correctness. Make things safer
 	std::shared_ptr<BNode> deepCopy(std::shared_ptr<BNode> par);
 
 	// Adjusting graph structure
@@ -57,7 +56,6 @@ public:
 	void setRigIndex(int idx);
 
 	UT_Matrix4 getWorldTransform();
-	//UT_Matrix4 getLocalTransform(); /// No longer in use
 
 	// Recursive adjustments to core variables. Important in setting up child modules
 	void recTransformation(float ageDif, float radiusMultiplier, 
@@ -89,3 +87,4 @@ private:
 	bool root;
 };
 #endif
+

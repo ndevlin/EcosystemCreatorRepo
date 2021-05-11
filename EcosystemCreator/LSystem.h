@@ -10,7 +10,7 @@ public:
     ~LSystem() {}
 
     // Set/get inputs
-    void loadProgram(const std::string& fileName); /// probably delete this
+    void loadProgram(const std::string& fileName);
     void loadProgramFromString(const std::string& program);
     void setDefaultAngle(float degrees);
     void setDefaultStep(float distance);
@@ -59,3 +59,4 @@ protected:
 };
 
 #endif
+

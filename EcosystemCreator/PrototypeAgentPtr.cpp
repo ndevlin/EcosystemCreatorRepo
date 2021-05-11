@@ -110,7 +110,6 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	rigName += "?proto";
 	rigName += std::to_string(PrototypeAgentPtr::protocount);
 	rigName += "rig";
-	///std::cout << rigName << std::endl;
 	GU_AgentRigPtr rig = GU_AgentRig::addRig(rigName);
 
 	UT_StringArray names;
@@ -143,32 +142,6 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 		children.append(i);
 	}
 
-	/// Print the rig joint data for testing
-	// Iterators
-	/*std::cout << "Num names: " + std::to_string(names.size()) << std::endl;
-	int c = 0;
-	UT_Array<UT_StringHolder>::iterator ptr;
-	for (ptr = names.begin(); ptr < names.end(); ptr++) {
-		std::cout << std::to_string(c) + " " + (*ptr).c_str() << std::endl;
-		c++;
-	}
-	c = 0;
-
-	std::cout << "Num counts: " + std::to_string(child_counts.sum()) << std::endl;
-	UT_Array<int>::iterator ptr1;
-	for (ptr1 = child_counts.begin(); ptr1 < child_counts.end(); ptr1++) {
-		std::cout << std::to_string(c) + " " + std::to_string(*ptr1) << std::endl;
-		c++;
-	}
-	c = 0;
-	
-	std::cout << "Num children: " + std::to_string(children.size()) << std::endl;
-	UT_Array<int>::iterator ptr2;
-	for (ptr2 = children.begin(); ptr2 < children.end(); ptr2++) {
-		std::cout << std::to_string(c) + " " + std::to_string(*ptr2) << std::endl;
-		c++;
-	}*/
-
 	if (!rig->construct(names, child_counts, children)) {
 		std::cout << "Error in rig construction" << std::endl;
 		return nullptr;
@@ -187,7 +160,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 	GU_DetailHandleAutoWriteLock gdl(geomHandle);
 	GU_Detail *gdp = gdl.getGdp();
 
-	// Create joint regions and, for now, bind them to everything - TODO clean up
+	// Create joint regions and bind them to everything
 	int numRegions = inOrder.size();
 	GEO_Detail::geo_NPairs pointDataPairs(1); ///(numRegions);
 
@@ -205,7 +178,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		paths.setPath(i, rig.transformName(i + 1));
 	}
 	
-	// For comparison in distanced based weighting. TODO use for user geometry:
+	// For comparison in distanced based weighting.
 	///std::vector<UT_Vector3> jointOrigins = std::vector<UT_Vector3>();
 
 	// Setting starting joint transformations here
@@ -227,8 +200,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 	const GA_AIFIndexPair* weights = captAttr->getAIFIndexPair();
 	weights->setEntries(captAttr, 1);///numRegions);
 
-	// TODO - Option for user input and storing influence to nearest two joints per point
-	/// COMMENTED OUT CODE CREATES WEIGHTS BY DISTANCE - CAN CHANGE FOR WHEN USERS CAN INPUT OWN GEOMETRY
+	/// COMMENTED OUT CODE CREATES WEIGHTS BY DISTANCE - CAN ADD FOR WHEN USERS CAN INPUT OWN GEOMETRY
 	// TODO change to nearest joint only (or nearest joint plus parent and children?)
 	/*for (GA_Offset ptoff : gdp->getPointRange()) {
 		UT_Vector3 pt = gdp->getPos3(ptoff);
@@ -284,11 +256,6 @@ GU_AgentShapeLibPtr PrototypeAgentPtr::createShapeLibrary(const char* path,
 	addWeights(rig, mainGeom, inOrder, jointOffsets);
 
 	shapeLibrary->addShape(DEFAULT_SKIN_NAME, mainGeom);
-
-	// TODO Add sphere that surrounds all nodes
-	///GU_DetailHandle coll_geo;
-	///coll_geo.allocateAndSet(sopCreateSphere(false), /*own*/true);
-	///shapelib->addShape(SOP_COLLISION_SKIN_NAME, coll_geo);
 
 	return shapeLibrary;
 }
@@ -349,7 +316,6 @@ PrototypeAgentPtr::createDefinition(std::shared_ptr<BNode> root, const char* pat
 	/// WARNING: Do NOT use above for custom user geometry. See addWeights function for alternative
 
 	// Create geometry
-	// TODO add option for user input
 	GU_Detail* geo = buildGeo(inOrder, offsetsPerJoint);
 
 	// Set up geometry information for agent (including weights and (unincluded) collision shape)
@@ -366,9 +332,8 @@ PrototypeAgentPtr::createDefinition(std::shared_ptr<BNode> root, const char* pat
 		return nullptr;
 	}
 
-	// TODO collisionLayer
-
 	GU_AgentDefinitionPtr definition(new GU_AgentDefinition(rig, shapeLibrary));
 	definition->addLayer(startLayer);
 	return definition;
 }
+

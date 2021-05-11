@@ -2,31 +2,20 @@
 #include "ECOSYSTEMPlugin.h"
 using namespace HDK_Sample;
 
-/// Custom filter for child node, allows all operator types right now
+/// Custom filter for child node, allows all operator types
 bool SOP_CustomSopOperatorFilter::allowOperatorAsChild(OP_Operator *op)
 {
-	// TODO change to just SOP operators maybe
-	return true;//(dynamic_cast<sop_CustomVopOperator *>(op) != NULL);
+	return true;
 }
 
 
 // Declaring parameters here
 static PRM_Name	plantAgeName("plantAge", "Plant Age");
-///static PRM_Name	      g1Name("g1",       "Tropism Falloff"); /// TropismDecrease
-///static PRM_Name	      g2Name("g2",       "Tropism Strength (temp)");
 //				             ^^^^^^^^     ^^^^^^^^^^^^^^^
 //				             internal     descriptive version
 
 // Set up the initial/default values for the parameters
 static PRM_Default plantAgeDefault(0, "0.0");
-///static PRM_Default	     g1Default(1.0);
-///static PRM_Default	     g2Default(-0.2);
-
-// Set up the ranges for the parameter inputs here
-// TODO change maximum based on PlantSpecies max age
-//static PRM_Range plantAgeRange(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 8.0);
-///static PRM_Range       g1Range(PRM_RANGE_RESTRICTED,  0.0, PRM_RANGE_UI, 3.0);
-///static PRM_Range       g2Range(PRM_RANGE_RESTRICTED, -1.0, PRM_RANGE_UI, 1.0);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -34,8 +23,6 @@ static PRM_Default plantAgeDefault(0, "0.0");
 PRM_Template
 SOP_Plant::myTemplateList[] = {
 	PRM_Template(PRM_STRING, PRM_Template::PRM_EXPORT_MIN, 1, &plantAgeName, &plantAgeDefault),
-	///PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g1Name,       &g1Default,       0, &g1Range),
-	///PRM_Template(PRM_FLT,    PRM_Template::PRM_EXPORT_MIN, 1, &g2Name,       &g2Default,       0, &g2Range),
 	PRM_Template()
 };
 
@@ -116,160 +103,6 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		newPlant->setOutput(outNode_sop);
 	}
 
-	//newPlant->moveToGoodPosition();
-
-	// TODO move color handling to agent
-
-	//
-	//// Color for bark
-	//OP_Node* color1 = newPlant->createNode("color");
-	//if (!color1)
-	//{
-	//	std::cout << "Color is Nullptr" << std::endl;
-	//	return newPlant;
-	//}
-	//else if (!color1->runCreateScript())
-	//	std::cout << "Color constructor error" << std::endl;
-	//
-	//
-	//OP_Node* mergeNode2 = newPlant->createNode("merge");
-	//if (!mergeNode2) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	//else if (!mergeNode2->runCreateScript())
-	//	std::cout << "Merge constructor error" << std::endl;
-	//
-	//
-	//
-	//// Copy to Points to allow leaf instancing
-	//OP_Node* copyToPoints = newPlant->createNode("copytopoints");
-	//if (!copyToPoints) 
-	//{ 
-	//	std::cout << "Copy To Points is Nullptr" << std::endl; 
-	//	return newPlant;
-	//}
-	//else if (!copyToPoints->runCreateScript())
-	//	std::cout << "Copy To Points constructor error" << std::endl;
-
-	// Star will serve as a leaf for now
-	/*OP_Node* star = newPlant->createNode("star");
-	if (!star)
-	{
-		std::cout << "Star is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!star->runCreateScript())
-		std::cout << "Star constructor error" << std::endl;
-
-	star->moveToGoodPosition();
-
-	// Color for leaves
-	OP_Node* color2 = newPlant->createNode("color");
-	if (!color2)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color2->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-	color2->connectToInputNode(*star, 0, 0);
-	color2->moveToGoodPosition();*/
-
-
-	//copyToPoints->connectToInputNode(*mergeNode, 1, 0);
-	//
-	//mergeNode2->connectToInputNode(*copyToPoints, 0, 0);
-	//
-	//mergeNode2->connectToInputNode(*color1, 1, 0);
-	//
-	//copyToPoints->moveToGoodPosition();
-	//
-	//mergeNode2->moveToGoodPosition();
-
-
-	/*OP_Node* mergeNode3 = newPlant->createNode("merge");
-	if (!mergeNode3) { std::cout << "Merge Node is Nullptr" << std::endl; }
-	else if (!mergeNode3->runCreateScript())
-		std::cout << "Merge constructor error" << std::endl;
-
-	// copyToPoints2 to create instances of the tree for a forest
-	OP_Node* copyToPoints2 = newPlant->createNode("copytopoints");
-	if (!copyToPoints2)
-	{
-		std::cout << "Copy To Points is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!copyToPoints2->runCreateScript())
-		std::cout << "Copy To Points constructor error" << std::endl;
-
-
-	
-	// Grid to represent ground
-	OP_Node* grid = newPlant->createNode("grid");
-	if (!grid)
-	{
-		std::cout << "Grid is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!grid->runCreateScript())
-		std::cout << "Grid constructor error" << std::endl;
-
-	grid->moveToGoodPosition();
-	
-
-	// Mountain to vary terrain
-	OP_Node* mountain = newPlant->createNode("mountain");
-	if (!mountain)
-	{
-		std::cout << "Mountain is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!mountain->runCreateScript())
-		std::cout << "Mountain constructor error" << std::endl;
-
-	mountain->connectToInputNode(*grid, 0, 0);
-	mountain->moveToGoodPosition();
-
-
-	// Color for leaves
-	OP_Node* color3 = newPlant->createNode("color");
-	if (!color3)
-	{
-		std::cout << "Color is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!color3->runCreateScript())
-		std::cout << "Color constructor error" << std::endl;
-
-
-	// Scatter to create points
-	OP_Node* scatter = newPlant->createNode("scatter");
-	if (!scatter)
-	{
-		std::cout << "Scatter is Nullptr" << std::endl;
-		return newPlant;
-	}
-	else if (!scatter->runCreateScript())
-		std::cout << "Scatter constructor error" << std::endl;
-
-	scatter->connectToInputNode(*mountain, 0, 0);
-	scatter->moveToGoodPosition();
-
-
-	copyToPoints2->connectToInputNode(*mergeNode2, 0, 0);
-	copyToPoints2->connectToInputNode(*scatter, 1, 0);
-	copyToPoints2->moveToGoodPosition();
-
-
-	mergeNode3->connectToInputNode(*copyToPoints2, 0, 0);
-	mergeNode3->connectToInputNode(*color3, 1, 0);
-	mergeNode3->moveToGoodPosition();
-
-	color3->connectToInputNode(*mountain, 0, 0);
-	color3->moveToGoodPosition();*/
-	
-	//color1->connectToInputNode(*mergeNode, 0, 0);
-	//color1->moveToGoodPosition();
-
 	return newPlant;
 }
 
@@ -282,24 +115,14 @@ SOP_Plant::SOP_Plant(OP_Network *net, const char *name, OP_Operator *op)
 	
 	plantAge = 0.0f;
 	plantBirthday = 0.0f;
-	///setAllowBuildDependencies
-	///mySopFlags.setManagesDataIDs(true);
 }
 
 SOP_Plant::~SOP_Plant() {}
-
-/// Unsure if we'll need this
-//unsigned
-//SOP_Plant::disableParms()
-//{
-//    return 0;
-//}
 
 /// Do the actual Plant SOP computing
 OP_ERROR
 SOP_Plant::cookMySop(OP_Context &context)
 {
-	//std::cout << "PLANT COOK START" << std::endl;
 	if (!ecosystem) {
 		// If it was initialized in an ecosystem, but not BY ecosystem...
 		auto eco = dynamic_cast<OBJ_Ecosystem*>(getParent()->getOperator());
@@ -319,14 +142,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 	fpreal now = context.getTime();
 	UT_Interrupt	*boss;
 	myCurrPoint = 0;
-	//flags().setTimeDep(false);
-
-	// Check if custom plant age has been adjusted
-	//float diff = ageVal - plantAge;
-	//if (abs(diff) > 0.00005f) {
-	//	plantAge = ageVal;
-	//	plantBirthday += diff;
-	//}
     
     // For ecosystem
 	if (ecosystem) {
@@ -340,15 +155,9 @@ SOP_Plant::cookMySop(OP_Context &context)
 	{
 		boss = UTgetInterrupt();
 
-		//if (rootModule) {
-		//	// TODO delete plant if age is over max age or under 0;
-		//	rootModule->setAge(getChangeInAge());
-		//}
-
 		// WARNING - does not update after you leave network until next cook
 		output = (SOP_Node*)getDisplayNodePtr();
 		if (output) {
-			// TODO find a better way, "instance" it maybe
 			gdp->stashAll();
 			// WARNING - Plant cook encompasses all children cooks.
 			// If we somehow change this so that output is cooked after plantAge 
@@ -366,9 +175,6 @@ SOP_Plant::cookMySop(OP_Context &context)
 		setFloat("plantAge", 0, now, plantAge);
 		enableParm("plantAge", false);
 
-		// TODO traverse down again to get flux
-		// Maybe handle vigor here too
-
 		// Must tell the interrupt server that we've completed.
 		boss->opEnd();
 	}
@@ -379,7 +185,7 @@ SOP_Plant::cookMySop(OP_Context &context)
 }
 
 
-/// Unsure if this is needed anymore
+/// May not be needed
 GU_DetailHandle
 SOP_Plant::cookMySopOutput(OP_Context &context, int outputidx, SOP_Node* interests) {
 	if (output) {
@@ -466,12 +272,9 @@ float SOP_Plant::calcWeightedAge() {
 
 /// Get the change in age - only works mid-cook
 float SOP_Plant::getChangeInAge() {
-	// TODO When implementing seeding, should delete plant if ecosystem age < birthday
-	// But for now  for consistency with random distribution
 	if (ecosystem->getAge() < plantBirthday) {
 		return plantBirthday - plantAge;
 	}
-	// Same here, delete plant when over max age
 	float weightedAge = calcWeightedAge();
 	if (weightedAge > plantSpecies->getMaxAge()) {
 		return plantSpecies->getMaxAge() - plantAge;
@@ -486,7 +289,7 @@ void SOP_Plant::setRootModule(SOP_Branch* node) {
 
 	if (rootModule) {
 		rootModule->setPlantAndPrototype(this, 0.0f, 0.0f);
-		rootModule->setAge(calcWeightedAge());//0.0f);
+		rootModule->setAge(calcWeightedAge());
 	}
 }
 
@@ -498,10 +301,6 @@ void SOP_Plant::setMerger(OP_Node* mergeNode) {
 /// Stores the initial output of the network, sets as display/render node
 void SOP_Plant::setOutput(SOP_Node* outNode) {
 	output = outNode;
-
-	//myDisplayNodePtr = output;
-	//myRenderNodePtr = output;
-	//myOutputNodes.append(output);
 
 	if (output) {
 		output->setDisplay(true);
@@ -519,7 +318,6 @@ SOP_Plant::createAndGetOperatorTable()
 {
 	// Chain custom SOP operators onto the default SOP operator table
 	OP_OperatorTable &table = *OP_Network::getOperatorTable(SOP_TABLE_NAME);
-	// TODO maybe add Branch Module here since it's dependent on parent // wait no
 
 	// Notify observers of the operator table that it has been changed.
 	table.notifyUpdateTableSinksOfUpdate();
@@ -608,3 +406,4 @@ void SOP_Plant::destroySelf() {
 	unloadData();
 	ecosystem->destroyNode(this);
 }
+

@@ -312,9 +312,6 @@
     <ClCompile Include="ECOSYSTEMPlugin.C">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="BranchPrototype.cpp" />
     <ClCompile Include="PlantSpecies.C" />
     <ClCompile Include="PrototypeAgentPtr.cpp" />

@@ -5,7 +5,6 @@
 float randomness = 0.5;
 
 /// Constructors
-// TODO, for other constructors, make sure to sort the time ranges
 BranchPrototype::BranchPrototype(const char* path, PlantSpeciesVariables* plantVars)
 	: BranchPrototype(path, plantVars, "FoFoFoA\nA->!\"[&FoFoFoA]////[&FoFoFoA]////&FoFoFoA\no->io", 3)
 {}
@@ -131,18 +130,6 @@ int BranchPrototype::getIdxAtTimestep(float time)
 	return searchHelper(0, agedPrototypes.size() - 1, time);
 }
 
-// Not rly used - TODO delete these two
-/*std::pair<float, float> BranchPrototype::getRangeAtTimestep(float time)
-{
-	int idx = getIdxAtTimestep(time);
-	return getRangeAtIdx(idx);
-}
-
-BNode* BranchPrototype::getShapeAtTimestep(float time)
-{
-	int idx = getIdxAtTimestep(time);
-	return getRootAtIdx(idx);
-}*/
 
 /// Get corresponding prototype range at index
 std::pair<float, float> BranchPrototype::getRangeAtIdx(int i)
@@ -161,8 +148,6 @@ GU_AgentDefinitionPtr BranchPrototype::getAgentDefAtIdx(int i)
 {
 	return agentData.at(i);
 }
-
-
 
 
 ////// CONTAINER FOR A SET OF PROTOTYPES /////
@@ -217,11 +202,8 @@ void PrototypeSet::defaultPrototype2(const char* path, PlantSpeciesVariables* pl
 }
 
 /// Method to select a prototype type based on apical control
-BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ) //, float rainfall, float temperature)
+BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ)
 {
-	// TODO select from a voronoi map. Actually based on lambda and determinancy
-	// For now we are passing in values based on plant age solely instead
-
 	float r = 1.5f / prototypes.size();
 	float lowerBound = std::max(lambda - r, 0.0f);
 	float upperBound = std::min(lambda + r, 1.0f);
@@ -229,21 +211,5 @@ BranchPrototype* PrototypeSet::selectNewPrototype(float lambda, float determ) //
 	float idx = int((((upperBound - lowerBound) * ((float)rand() / RAND_MAX)) + lowerBound) * prototypes.size());
 
 	return prototypes.at(idx)->copyValues();
-	//return prototypes.at(0)->copyValues();
-
-	/*float idx = (((rainfall + temperature) / 2.f)) * prototypes.size();
-
-	float randAdjust = randomness * (1.f / lambda) * (((float)rand() * 2.f / RAND_MAX) - 1.f);
-
-	int idxInt = int(idx + randAdjust);
-
-	idxInt = std::max(idxInt, 0);
-	idxInt = std::min(idxInt, int(prototypes.size() - 1));
-
-	std::cout << "idxInt: " << idxInt << std::endl;
-
-	//int idx = int((((rainfall + temperature) / 2.f) - 0.00001f) * prototypes.size());
-
-	return prototypes.at(idxInt)->copyValues();*/
 }
 

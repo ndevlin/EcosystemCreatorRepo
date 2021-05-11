@@ -96,7 +96,7 @@ protected:
 	/// Do the actual change-based computataions
 	virtual OP_ERROR		 cookMySop(OP_Context &context);
 
-	bool			         cookDataForAnyOutput() const override // TODO confirm needed
+	bool			         cookDataForAnyOutput() const override
 								{ return true; }
 
 private:
@@ -116,10 +116,7 @@ private:
 
 	const char* pathToParent;
 
-	// TODO store *ecosystem, notify when temp and rainfall change, regenerate random scene
-	// set reloadPlants to true in recalculateLikelihood() func
-
-	PrototypeSet* prototypeSet; // TODO Make unique pointer
+	PrototypeSet* prototypeSet;
 	PlantSpeciesVariables vars;
 
 	// WARNING: The effects of changing these only takes place after recooking ecosystem
@@ -128,3 +125,4 @@ private:
 };
 } // End HDK_Sample namespace
 #endif
+

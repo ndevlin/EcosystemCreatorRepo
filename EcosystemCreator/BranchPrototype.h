@@ -15,13 +15,11 @@ public:
 		const std::string& grammarProgram, int iterations); /// From LSystem grammar
 	BranchPrototype(const char* path, PlantSpeciesVariables* plantVars, 
 		LSystem& lsystem, int iterations);					/// From existing LSystem
-				 // TODO From existing node structure
 
 	// Deep copy
 	BranchPrototype(BranchPrototype* other);
 	~BranchPrototype() {}
 
-	// TODO dear god find a better way
 	BranchPrototype* copyValues();
 
 	// TODO add const
@@ -29,11 +27,7 @@ public:
 	float getMaturityAge(); /// Returns the upper bound on the last age range
 
 	/// Get the index to value in agedPrototypes that corresponds with this time
-	int getIdxAtTimestep(float time);
-
-	/// Never used?
-	//std::pair<float, float> getRangeAtTimestep(float time);
-	//BNode* getShapeAtTimestep(float time);                 
+	int getIdxAtTimestep(float time);               
 
 	/// Get corresponding prototype values at index
 	std::pair<float, float> getRangeAtIdx(int i);
@@ -74,15 +68,12 @@ class PrototypeSet
 public:
 	PrototypeSet(const char* path, PlantSpeciesVariables* plantVars, 
 		int defaultSpeciesType = 0);
-	// TODO add more constructors
 	~PrototypeSet() {}
 	
 	/// Method to select a prototype type based on apical control
-	BranchPrototype* selectNewPrototype(float lambda, float determ);// , float rainfall, float temperature);
-	// TODO ^ add starting orientation?
+	BranchPrototype* selectNewPrototype(float lambda, float determ);
 
 private:
-	// TODO change to map structure
 	std::vector<BranchPrototype*> prototypes;
 
 	// Some custom default setups
@@ -92,3 +83,4 @@ private:
 };
 
 #endif
+

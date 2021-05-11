@@ -50,10 +50,10 @@ namespace PrototypeAgentPtr
 	extern GU_AgentLayerPtr createStartLayer(const char* path, 
 		const GU_AgentRigPtr& rig, const GU_AgentShapeLibPtr &shapeLibrary);
 
-	// TODO pass in custom user data
 	/// Returns a definition defining an agent (protoype) type
 	extern GU_AgentDefinitionPtr createDefinition(std::shared_ptr<BNode> root, 
 		const char* path);
 }
 
 #endif
+

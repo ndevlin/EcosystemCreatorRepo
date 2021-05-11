@@ -103,7 +103,7 @@ protected:
 	GU_DetailHandle			 cookMySopOutput(OP_Context &context,
 								int outputidx, SOP_Node* interests) override;
 
-	virtual bool			 cookDataForAnyOutput() const override // TODO confirm needed
+	virtual bool			 cookDataForAnyOutput() const override
 								{ return true; }
 
 	/// Inspired by custom vop example - setting up this network's table
@@ -112,6 +112,7 @@ protected:
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
     virtual bool evalVariableValue(fpreal &val, int index, int thread);
+
     // Add virtual overload that delegates to the super class to avoid
     // shadow warnings.
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
@@ -132,8 +133,6 @@ private:
 
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
 	float AGE(fpreal t)     { return evalFloat("plantAge", 0, t); }
-	//float G1(fpreal t)      { return evalFloat("g1",       0, t); }
-	//float G2(fpreal t)      { return evalFloat("g2",       0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -151,14 +150,14 @@ private:
 
 	/// CHILD NODES:
 	/// The root Branch Module of this tree
-	SOP_Branch* rootModule; // TODO make adaptable (ditto to merger problem below)
+	SOP_Branch* rootModule;
 
 	/// Nodes to organize the network
 	OP_Node*  merger;  /// The merge node all Branch outputs are connected to
 	SOP_Node* output;  /// The current View/Display output of this node, controlled in Cook
-						// TODO - there is currently no backup if the user deletes merger
-								// Maybe add a backup function to create a new one if null
+
 };
 } // End HDK_Sample namespace
 
 #endif
+

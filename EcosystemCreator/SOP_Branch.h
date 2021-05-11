@@ -38,7 +38,7 @@ public:
     static CH_LocalVariable	 myVariables[];
 
 	/// Important: updates all time-based values in all modules. Does all main calculations
-	void setAge(float changeInAge); // TODO should probaby split up
+	void setAge(float changeInAge);
 
 	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
 	void setPlantAndPrototype(SOP_Plant* p, float lambda, float determ);
@@ -64,6 +64,7 @@ protected:
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
     virtual bool evalVariableValue(fpreal &val, int index, int thread);
+
     // Add virtual overload that delegates to the super class to avoid
     // shadow warnings.
     virtual bool evalVariableValue(UT_String &v, int i, int thread)
@@ -72,8 +73,6 @@ protected:
 				 }
 
 	virtual bool cookDataForAnyOutput()	const { return true; }
-
-	// TODO add rotate module function / module placement
 
 private:
 	/// Update the current agent rig with the transformations of nodes
@@ -105,3 +104,4 @@ private:
 } // End HDK_Sample namespace
 
 #endif
+

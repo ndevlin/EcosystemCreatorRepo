@@ -32,7 +32,7 @@ public:
 
 	/// Confirms that node should be dirtied on time change
 	bool					 handleTimeChange(fpreal /* t */) override 
-								{ return true; } // Doesn't seem to make a difference - TODO check
+								{ return true; }
 
 	/// Get the age of this ecosystem - sum of the timeline and parm Time Shift
 	float                    getAge();
@@ -49,10 +49,9 @@ public:
 	SOP_Plant*				 createPlant(PlantSpecies* currSpecies, 
 								UT_Vector3 origin = UT_Vector3(),
 								bool setNewBirthday = true);
-									// TODO, seeding (in SOP_Plant)
 
 	/// Choose a likely plant species to spawn based on current spawn location's climate features
-	PlantSpecies* chooseSpecies(/* TODO Allow for temp shifts based on position */);
+	PlantSpecies* chooseSpecies();
 
 	/// Computes the likelihood (float between 0-1) for each species that it would
 	/// spawn in this climate
@@ -63,15 +62,8 @@ protected:
 	OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op);
     virtual ~OBJ_Ecosystem();
 
-    /// Disable parameters according to other parameters.
-    //virtual unsigned		 disableParms();
-
     /// Do the actual change-based computataions
     virtual OP_ERROR		 cookMyObj(OP_Context &context);
-
-    /// This function is used to lookup local variables that you have
-    /// defined specific to your SOP.
-    /* TODO maybe utilize evalVariableValue instead of all the pointers */
 
 	/// Stores the merge node that combines all plant geometry, sets as display node
 	void setMerger(OP_Node* mergeNode);
@@ -98,7 +90,6 @@ private:
 	float AGE(fpreal t)         { return evalFloat("timeShift", 0, t); }
 	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
 	float RAINFALL(fpreal t)    { return evalFloat("rainfall", 0, t); }
-	//float RANDOMNESS(fpreal t)  { return evalFloat("randomness", 0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -124,3 +115,4 @@ private:
 } // End HDK_Sample namespace
 
 #endif
+
