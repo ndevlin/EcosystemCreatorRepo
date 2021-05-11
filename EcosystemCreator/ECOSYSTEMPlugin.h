@@ -3,69 +3,103 @@
 
 #include <OBJ/OBJ_Geometry.h>
 #include <SOP_Branch.h>
-#include "BranchPrototype.h"
+#include <SOP_Plant.h>
 
 namespace HDK_Sample {
-class OBJ_Plant : public OBJ_Geometry
+
+/// Stores the overall ecosystem and controls the time
+class OBJ_Ecosystem : public OBJ_Geometry
 {
 public:
     static OP_Node		*myConstructor(OP_Network*, const char *,
 							    OP_Operator *);
 
+	// User Interface:
+
     /// Stores the description of the interface of the SOP in Houdini.
     /// Each parm template refers to a parameter.
     static PRM_Template		 myTemplateList[];
-	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
+
+	/// Pairs the local interface of OBJ_Ecosystem with parent class OBJ_Geometry
+	static OP_TemplatePair*  buildTemplatePair(OP_TemplatePair *baseTemplate);
 	static OP_VariablePair*  buildVariablePair(OP_VariablePair *baseVariable);
 
-	/// Copy's a prototype instance, used as a base for a new branch module
-	BranchPrototype*         copyPrototypeFromList(float lambda, float determ, float temperatature, float rainfall);
-	/// Add the corresponding node to the group output geometry
-	void                     addToMerger(SOP_Branch* bMod, int index);
-	// TODO: add a better merger remover. Duplicate inputs end up existing to root???
+	/// Added better functionality to check (and cook) for time change
+	bool					 cook(OP_Context &context) override;
 
-	float                     getAge();
+	/// Confirms that node should be dirtied on time change
+	bool					 handleTimeChange(fpreal /* t */) override 
+								{ return true; } // Doesn't seem to make a difference - TODO check
+
+	/// Get the age of this ecosystem - sum of the timeline and parm Time Shift
+	float                    getAge();
+
+	/// Add the corresponding node to the group output geometry
+	void                     addToMerger(OP_Node* pNode);
+	// TODO: confirm that a remove-from-merge function is unneded
+
+	/// Store a reference to this node as the plant origin points sop
+	void                     setScatter(OP_Node* scNode);
+
+	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
+	SOP_Plant* createPlant(UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
+	SOP_Plant* createPlant(PlantSpecies* currSpecies, 
+		UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
+			// TODO, seeding (in SOP_Plant)
+
+	/// Choose a likely plant species to spawn based on current spawn location's climate features
+	PlantSpecies* chooseSpecies(/* TODO use enviro parameters at curr location */);
+
+	// TODO - TEMPORARY saving scatter to update with climate-based likelihood
+	// correspond to speciesList above
+	//std::vector<OP_Node*> scatterNodes;
 
 protected:
 
-	OBJ_Plant(OP_Network *net, const char *name, OP_Operator *op);
-    virtual ~OBJ_Plant();
+	OBJ_Ecosystem(OP_Network *net, const char *name, OP_Operator *op);
+    virtual ~OBJ_Ecosystem();
 
     /// Disable parameters according to other parameters.
     //virtual unsigned		 disableParms();
 
-
-    /// Do the actual Branch SOP computing
+    /// Do the actual change-based computataions
     virtual OP_ERROR		 cookMyObj(OP_Context &context);
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
-    /*virtual bool evalVariableValue(fpreal &val, int index, int thread);
-    // Add virtual overload that delegates to the super class to avoid
-    // shadow warnings.
-    virtual bool evalVariableValue(UT_String &v, int i, int thread)
-				 { return evalVariableValue(v, i, thread); }*/
+    /* TODO maybe utilize evalVariableValue instead of all the pointers */
 
-	void setPrototypeList();
-	void setRootModule(SOP_Branch* node);
+	/// Stores the merge node that combines all plant geometry, sets as display node
 	void setMerger(OP_Node* mergeNode);
 
-	void setMainMerger(OP_Node* mergeNode);
+	/// Initialized a new PlantSpecies
+	void initNewSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
+		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
+	
+	void initAndAddSpecies(fpreal t/* TODO add parameters*/, int defaultSpeciesType = 0,
+		float temp = 28.0f, float precip = 4100.0f, float maxAge = 8.9f, float growthRate = 1.0f,
+		float g1Init = 1.0f, float g2Init = -0.2f, float lengthMult = 0.3f, float thickMult = 0.4f);
 
+	/// TEMP
+	PlantSpecies* getSpeciesAtIdx(int idx);
+	float getLikelihoodAtIdx(int idx) const;
+
+	/// Report number of species
+	int numSpecies() const;
+	int numRandPlants() const;
 
 private:
+	void recalculateLikelihood();
+
     /// Accessors to simplify evaluating the parameters of the SOP. Called in cook
-	float AGE(fpreal t)     { return evalFloat("time", 0, t); }
-	float G1(fpreal t)      { return evalFloat("g1",       0, t); }
-	float G2(fpreal t)      { return evalFloat("g2",       0, t); }
-	float RAINFALL(fpreal t) { return evalFloat("rainfall", 0, t); }
+	float AGE(fpreal t)         { return evalFloat("timeShift", 0, t); }
 	float TEMPERATURE(fpreal t) { return evalFloat("temperature", 0, t); }
-	float RANDOMNESS(fpreal t) { return evalFloat("randomness", 0, t); }
-
-
+	float RAINFALL(fpreal t)    { return evalFloat("rainfall", 0, t); }
+	//float RANDOMNESS(fpreal t)  { return evalFloat("randomness", 0, t); }
 
     /// "Member variables are stored in the actual SOP, not with the geometry.
     /// These are just used to transfer data to the local variable callback.
@@ -73,19 +107,20 @@ private:
     int		myCurrPoint;
     int		myTotalPoints;
 
-	float plantAge;
+	int totalPlants;
 
-	PrototypeSet* prototypeSet;
+	float worldAge;
+	float worldTemp;
+	float worldPrecip;
 
-	/// SINGLE PLANT
-	/// SOP_Branch* rootModule;
-	std::vector<SOP_Branch*> rootModules;
-	int numRootModules;
-	///
+	std::vector<PlantSpecies*> speciesList;
+	std::vector<float> speciesLikelihood;
 
-	std::vector<OP_Node*> mergers;
+	OP_Node* eco_merger;
+	SOP_Node* scatterPoints;
 
-	OP_Node* mainMerge;
+	bool reloadPlants;
+	bool generatePlants;
 };
 } // End HDK_Sample namespace
 

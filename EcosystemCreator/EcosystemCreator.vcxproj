@@ -114,7 +114,7 @@
     <IntDir>$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">
-    <OutDir>C:\Users\nd_mo\Documents\Houdini18.5\dso</OutDir>
+    <OutDir>C:\Users\award\Documents\Houdini18\dso</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
@@ -316,8 +316,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="BranchPrototype.cpp" />
+    <ClCompile Include="PlantSpecies.C" />
     <ClCompile Include="PrototypeAgentPtr.cpp" />
     <ClCompile Include="SOP_Branch.C" />
+    <ClCompile Include="SOP_Plant.C" />
     <ClCompile Include="vec.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -332,8 +334,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release64|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="BranchPrototype.h" />
+    <ClInclude Include="PlantSpecies.h" />
     <ClInclude Include="PrototypeAgentPtr.h" />
     <ClInclude Include="SOP_Branch.h" />
+    <ClInclude Include="SOP_Plant.h" />
     <ClInclude Include="vec.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

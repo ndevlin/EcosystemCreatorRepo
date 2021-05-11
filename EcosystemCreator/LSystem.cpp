@@ -218,7 +218,8 @@ std::shared_ptr<BNode> LSystem::process(unsigned int n)
 {
     Turtle turtle;
     std::stack<Turtle> stack;
-	// TODO input origin point, TODO check n or n - 1, thick
+
+	// Initial root node
 	std::shared_ptr<BNode> rootNode = std::make_shared<BNode>(vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 0.0f, 0.0f), n, 0.0f, 1.0f, true);
 	turtle.currSegment = rootNode;
 
@@ -235,6 +236,7 @@ std::shared_ptr<BNode> LSystem::process(unsigned int n)
             vec3 start = turtle.pos;
             turtle.moveForward(mDfltStep);
 
+			// TODO change to char-float pair
 			// Add "o->io" as a rule for objects whose iteration depth you want to track
 			float iterationAge = 0.0f;
 			sym = insn.substr(i + 1, 1);
@@ -245,6 +247,7 @@ std::shared_ptr<BNode> LSystem::process(unsigned int n)
 				sym = insn.substr(i + 1, 1);
 			}
 
+			// Create new branch segment
 			std::shared_ptr<BNode> newSegment = std::make_shared<BNode>(start, 
 				turtle.pos, iterationAge, mDfltStep, 
 				turtle.currSegment->getBaseRadius() * 0.9);

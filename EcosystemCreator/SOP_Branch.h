@@ -20,7 +20,7 @@
 #include <limits.h>
 
 namespace HDK_Sample {
-class OBJ_Plant;
+class SOP_Plant;
 
 extern int branchIDnum;
 
@@ -37,19 +37,18 @@ public:
     /// This optional data stores the list of local variables.
     static CH_LocalVariable	 myVariables[];
 
-	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
-	void setPlantAndPrototype(OBJ_Plant* p, float lambda, float determ, int rootIndexIn, float rainfall, float temperature);
-
-	/// While setting the parent module, also alters current node data based on last branch
-	void setParentModule(SOP_Branch* parModule, std::shared_ptr<BNode> connectingNode = nullptr);
-
 	/// Important: updates all time-based values in all modules. Does all main calculations
 	void setAge(float changeInAge); // TODO should probaby split up
 
-	void destroySelf();
+	/// Set up plant pointer, selected prototype data, and initializes root and ageRange
+	void setPlantAndPrototype(SOP_Plant* p, float lambda, float determ);
 
-	float rainfall;
-	float temperature;
+	/// While setting the parent module, also alters current node data based on parent SOP_Branch
+	void setParentModule(SOP_Branch* parModule, float newAge,
+		std::shared_ptr<BNode> connectingNode = nullptr);
+
+	/// Disconnect and delete this SOP_Branch
+	void destroySelf();
 
 protected:
 
@@ -59,67 +58,49 @@ protected:
     /// Disable parameters according to other parameters.
     virtual unsigned		 disableParms();
 
-
-    /// cookMySop does the actual work of the SOP computing, in this
-    /// case, a Branch
+    /// cookMySop does the actual work of the SOP Branch computing
     virtual OP_ERROR		 cookMySop(OP_Context &context);
 
     /// This function is used to lookup local variables that you have
     /// defined specific to your SOP.
-    virtual bool evalVariableValue(
-				    fpreal &val,
-				    int index,
-				    int thread);
+    virtual bool evalVariableValue(fpreal &val, int index, int thread);
     // Add virtual overload that delegates to the super class to avoid
     // shadow warnings.
-    virtual bool evalVariableValue(
-				    UT_String &v,
-				    int i,
-				    int thread)
+    virtual bool evalVariableValue(UT_String &v, int i, int thread)
 				 {
 				     return evalVariableValue(v, i, thread);
 				 }
 
-	//bool cookDataForAnyOutput() const override { return true; }
 	virtual bool cookDataForAnyOutput()	const { return true; }
 
-
-	// TODO add rotate module function
+	// TODO add rotate module function / module placement
 
 private:
-    /// Traverse all nodes in this module to create cylinder geometry
-	void traverseAndBuild(GU_Detail* gdp, std::shared_ptr<BNode> currNode, int divisions);
-							// TODO can go fully procedural by just adding parent pos as input 
-							// then wont need to copy over prototypes every time
-
+	/// Update the current agent rig with the transformations of nodes
 	void setTransforms(std::shared_ptr<BNode> currNode);
 
-	/// Swaps to whichever is the currently-aged prototype to reference
+	/// Swaps tree beginning at "root" to be the appropriately aged prototype copy
 	void setRootByAge(float time);
 
-    /// Any local variables:
-    int		myCurrPoint;
-    int		myTotalPoints;
+    /// LOCAL VARIABLES:
+    int		myCurrPoint; /// Just used to tell when cooking
 
-	int		branchID;
+	int		branchID; /// Custom ID number of branch
 
-	bool init_agent;
-	bool change_agent;
+	bool init_agent;   // These two are currently unused, meant to only complete
+	bool change_agent; // certain agent-related tasks in cook
 
-	GU_Agent* moduleAgent;
-	GU_PrimPacked* packedPrim;
+	GU_Agent*	    moduleAgent;  /// Current agent made from PrototypeAgentPtr
+	GU_PrimPacked*  packedPrim;   /// The prim point at this agent
 
-	OBJ_Plant* plant;
-	BranchPrototype* prototype;
+	SOP_Plant*		 plant;		  /// The plant that this module is contained in
+	BranchPrototype* prototype;   /// The prototype this module took as reference
 
-	std::pair<float, float> currAgeRange;
-
-	std::shared_ptr<BNode> root;
-
-	int rootIndex;
-
-	SOP_Branch* parentModule;
-	std::vector<SOP_Branch*> childModules;
+	std::pair<float, float> currAgeRange;  /// Defines which age of the prototype we are looking at
+	std::shared_ptr<BNode>  root;		   /// Root of the current aged prototype
+											// TODO swap currAgeRange to int index for storage purposes
+	SOP_Branch* parentModule;				/// If not root, the module this branches off from
+	std::vector<SOP_Branch*> childModules;  /// The modules branching off of this one
 };
 } // End HDK_Sample namespace
 

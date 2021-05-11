@@ -39,6 +39,12 @@
     <ClCompile Include="PrototypeAgentPtr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SOP_Plant.C">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PlantSpecies.C">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="matrix.h">
@@ -63,6 +69,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PrototypeAgentPtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SOP_Plant.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlantSpecies.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

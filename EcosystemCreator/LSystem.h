@@ -6,10 +6,6 @@
 class LSystem
 {
 public:
-    typedef std::pair<vec3, std::string> Geometry;
-    typedef std::pair<vec3, vec3> Branch;
-
-public:
     LSystem();
     ~LSystem() {}
 
@@ -36,7 +32,6 @@ protected:
     
     std::map<std::string, std::string> productions;
     std::vector<std::string> iterations;
-    std::vector<std::pair<vec3,vec3>> bboxes;
     std::string current;
     float mDfltAngle;
     float mDfltStep;

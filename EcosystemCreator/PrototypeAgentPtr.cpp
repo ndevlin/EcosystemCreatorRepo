@@ -1,23 +1,27 @@
 #include "PrototypeAgentPtr.h"
 
+/// Establishes a unique ID for each prototype-definition feature
 int PrototypeAgentPtr::protocount = 0;
 
+/// Fills a detail with default geometry defined by a BNode tree structure
 GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inOrder,
-	std::map<int, std::vector<GA_Offset>>& jointOffsets,
-	int divisions) {
+				std::map<int, std::vector<GA_Offset>>& jointOffsets, int divisions) {
 	GU_Detail* geo = new GU_Detail;
 
+	// Parses each node in order of tree depth, since we already have that vector
 	for (int i = 0; i < inOrder.size(); i++) {
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
 		std::shared_ptr<BNode> parent = currNode->getParent();
-		if (!parent) { continue; }
 
+		if (!parent) { continue; } /// Only create a "branch segment" between two nodes
+
+		// The positions defining the ends of this cylinder
 		std::vector<UT_Vector3> parentCircle = std::vector<UT_Vector3>();
 		std::vector<UT_Vector3> currCircle = std::vector<UT_Vector3>();
 
 		UT_Matrix3 transform = UT_Matrix3(currNode->getWorldTransform());
 
-		// Create angled circle shapes
+		// Create the angled circle shapes
 		float ang = M_PI * 2 / divisions;
 		for (int i = 0; i < divisions; i++) {
 			// Get point along a circle
@@ -25,7 +29,7 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 			point(0) = cos(ang * i);
 			point(1) = 0.0f;
 			point(2) = -sin(ang * i);
-			// rotate to match the branch
+			// Rotate to match the branch
 			point = rowVecMult(point * 0.1f, transform);
 
 			parentCircle.push_back(parent->getPos() + point);
@@ -35,7 +39,9 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 		GU_PrimPoly* polyParentCircle = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
 		GU_PrimPoly* polyCurrCircle = GU_PrimPoly::build(geo, divisions, GU_POLY_CLOSED);
 
+		// Now set the actual positions in the details
 		for (int j = 0; j < divisions; j++) {
+			// For the circles:
 			GA_Offset ptoffPar = polyParentCircle->getPointOffset(j);
 			geo->setPos3(ptoffPar, parentCircle.at(j));
 			jointOffsets.at(parent->getRigIndex()).push_back(ptoffPar);///
@@ -44,7 +50,7 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 			geo->setPos3(ptoffCurr, currCircle.at(j));
 			jointOffsets.at(currNode->getRigIndex()).push_back(ptoffCurr);///
 
-			// Set individual rectangle faces
+			// For the individual rectangle faces along the cylinder length:
 			GU_PrimPoly* polyRect = GU_PrimPoly::build(geo, 4, GU_POLY_CLOSED);
 
 			for (int k = 0; k < 2; k++) {
@@ -65,7 +71,7 @@ GU_Detail*  PrototypeAgentPtr::buildGeo(std::vector<std::shared_ptr<BNode>>& inO
 }
 
 
-// Inspired by GeeksforGeeks
+/// Finding height of a BNode tree - Inspired by GeeksforGeeks
 int recNumLevels(std::shared_ptr<BNode> currNode) {
 	if (currNode) {
 		int currMax = 0;
@@ -81,6 +87,7 @@ int recNumLevels(std::shared_ptr<BNode> currNode) {
 	return 0;
 }
 
+/// Storing a BNode tree in order of the node's distance from the root
 void recChildLevel(std::shared_ptr<BNode> currNode, int level, 
 	std::vector<std::shared_ptr<BNode>>& inOrder) {
 	if (currNode) {
@@ -95,6 +102,7 @@ void recChildLevel(std::shared_ptr<BNode> currNode, int level,
 	}
 }
 
+/// Stores the indexing information for this definition's rig (transforms are set in weight function)
 GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BNode> root,
 	std::vector<std::shared_ptr<BNode>>& inOrder)
 {
@@ -102,7 +110,7 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 	rigName += "?proto";
 	rigName += std::to_string(PrototypeAgentPtr::protocount);
 	rigName += "rig";
-	std::cout << rigName << std::endl;
+	///std::cout << rigName << std::endl;
 	GU_AgentRigPtr rig = GU_AgentRig::addRig(rigName);
 
 	UT_StringArray names;
@@ -131,10 +139,11 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 		child_counts.append(currNode->getChildren().size());
 	}
 
-	for (int i = 2; i < inOrder.size() + 1; i++) { 	// 0 = skin, 1 = root
+	for (int i = 2; i < inOrder.size() + 1; i++) { 	/// 0 = skin, 1 = root
 		children.append(i);
 	}
 
+	/// Print the rig joint data for testing
 	// Iterators
 	/*std::cout << "Num names: " + std::to_string(names.size()) << std::endl;
 	int c = 0;
@@ -169,6 +178,8 @@ GU_AgentRigPtr PrototypeAgentPtr::createRig(const char* path, std::shared_ptr<BN
 }
 
 
+/// Stores the initial rig-joint transformations and 
+/// the weights of their influence on the geometry points
 void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig, 
 	const GU_DetailHandle& geomHandle, std::vector<std::shared_ptr<BNode>>& inOrder,
 	std::map<int, std::vector<GA_Offset>>& jointOffsets) {
@@ -178,8 +189,7 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 
 	// Create joint regions and, for now, bind them to everything - TODO clean up
 	int numRegions = inOrder.size();
-	//GEO_Detail::geo_NPairs pointDataPairs(numRegions);
-	GEO_Detail::geo_NPairs pointDataPairs(1);
+	GEO_Detail::geo_NPairs pointDataPairs(1); ///(numRegions);
 
 	GA_RWAttributeRef captAttr = gdp->addPointCaptureAttribute(pointDataPairs);
 
@@ -191,21 +201,19 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 
 	// Pass joint names to the capture / skinning attrs
 	GEO_RWAttributeCapturePath paths(gdp);
-	// CRASHES during the following for loop upon deleting and reloading scene
 	for (int i = 0; i < numRegions; i++) {
 		paths.setPath(i, rig.transformName(i + 1));
 	}
 	
-	// For comparison:
-	std::vector<UT_Vector3> jointOrigins = std::vector<UT_Vector3>();
+	// For comparison in distanced based weighting. TODO use for user geometry:
+	///std::vector<UT_Vector3> jointOrigins = std::vector<UT_Vector3>();
 
-	// FINALLY doing transforms here
+	// Setting starting joint transformations here
 	for (int i = 0; i < numRegions; i++) {
 		std::shared_ptr<BNode> currNode = inOrder.at(i);
-		jointOrigins.push_back(currNode->getPos());
+		///jointOrigins.push_back(currNode->getPos());
 
 		UT_Matrix4 jointTrans = currNode->getWorldTransform();
-
 		jointTrans.invert();
 
 		GEO_CaptureBoneStorage boneTrans;
@@ -215,10 +223,12 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 			GEO_CaptureBoneStorage::tuple_size);
 	}
 
-	// And now weights
+	// And now weights per point in the geometry
 	const GA_AIFIndexPair* weights = captAttr->getAIFIndexPair();
-	weights->setEntries(captAttr, 1);//numRegions);
+	weights->setEntries(captAttr, 1);///numRegions);
 
+	// TODO - Option for user input and storing influence to nearest two joints per point
+	/// COMMENTED OUT CODE CREATES WEIGHTS BY DISTANCE - CAN CHANGE FOR WHEN USERS CAN INPUT OWN GEOMETRY
 	// TODO change to nearest joint only (or nearest joint plus parent and children?)
 	/*for (GA_Offset ptoff : gdp->getPointRange()) {
 		UT_Vector3 pt = gdp->getPos3(ptoff);
@@ -242,12 +252,13 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 		//}
 	}*/
 
+	/// SAME RESULT AS (closest single point version of) ABOVE FOR DEFAULT TREE CONSTRUCTION
 	std::map<int, std::vector<GA_Offset>>::iterator iter;
 	for (iter = jointOffsets.begin(); iter != jointOffsets.end(); ++iter) {
 		int currRegion = iter->first - 1;
 
 		for (GA_Offset ptoff : iter->second) {
-			weights->setIndex(captAttr, ptoff, 0, currRegion); // entry, region
+			weights->setIndex(captAttr, ptoff, 0, currRegion); /// entry, region
 			weights->setData(captAttr, ptoff, 0, 1.f);
 		}
 	}
@@ -255,8 +266,9 @@ void PrototypeAgentPtr::addWeights(const GU_AgentRig& rig,
 
 
 #define DEFAULT_SKIN_NAME   GU_AGENT_LAYER_DEFAULT".skin"
-//#define COLLISION_SKIN_NAME GU_AGENT_LAYER_COLLISION".skin"
+///#define COLLISION_SKIN_NAME GU_AGENT_LAYER_COLLISION".skin"
 
+/// Stores geometry information for prototype (including weights)
 GU_AgentShapeLibPtr PrototypeAgentPtr::createShapeLibrary(const char* path, 
 	const GU_AgentRig& rig, GU_Detail* geo, std::vector<std::shared_ptr<BNode>>& inOrder,
 	std::map<int, std::vector<GA_Offset>>& jointOffsets)
@@ -274,13 +286,15 @@ GU_AgentShapeLibPtr PrototypeAgentPtr::createShapeLibrary(const char* path,
 	shapeLibrary->addShape(DEFAULT_SKIN_NAME, mainGeom);
 
 	// TODO Add sphere that surrounds all nodes
-	//GU_DetailHandle coll_geo;
-	//coll_geo.allocateAndSet(sopCreateSphere(false), /*own*/true);
-	//shapelib->addShape(SOP_COLLISION_SKIN_NAME, coll_geo);
+	///GU_DetailHandle coll_geo;
+	///coll_geo.allocateAndSet(sopCreateSphere(false), /*own*/true);
+	///shapelib->addShape(SOP_COLLISION_SKIN_NAME, coll_geo);
 
 	return shapeLibrary;
 }
 
+
+/// Stores skin and deformer information
 GU_AgentLayerPtr PrototypeAgentPtr::createStartLayer(const char* path, 
 	const GU_AgentRigPtr& rig, const GU_AgentShapeLibPtr & shapeLibrary)
 {
@@ -288,7 +302,7 @@ GU_AgentLayerPtr PrototypeAgentPtr::createStartLayer(const char* path,
 	skinNames.append(DEFAULT_SKIN_NAME);
 
 	UT_IntArray transformIdx;
-	transformIdx.append(0); // because skin is at rig index 0
+	transformIdx.append(0); /// because skin is at rig index 0
 
 	UT_Array<GU_AgentShapeDeformerConstPtr> deformers;
 	deformers.append(GU_AgentLayer::getLinearSkinDeformer());
@@ -309,95 +323,52 @@ GU_AgentLayerPtr PrototypeAgentPtr::createStartLayer(const char* path,
 	return startLayer;
 }
 
-//std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr> 
+/// Returns a definition defining an agent (protoype) type
 GU_AgentDefinitionPtr
-	PrototypeAgentPtr::createDefinition(std::shared_ptr<BNode> root, const char* path) {
+PrototypeAgentPtr::createDefinition(std::shared_ptr<BNode> root, const char* path) {
 	PrototypeAgentPtr::protocount++;
+
+	// Store the BNodes in order of tree height. Needed for ordering of rig joints
 	std::vector<std::shared_ptr<BNode>> inOrder = std::vector<std::shared_ptr<BNode>>();
 
+	// Create agent Rig
 	GU_AgentRigPtr rig = createRig(path, root, inOrder);
 	if (!rig) { 
 		std::cout << "Rig is null" << std::endl;
 		return nullptr;
-		//return std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr>(nullptr, nullptr);
 	}
 
-	std::cout << "Did rig" << std::endl;
-
-	/// TEMP TEST
+	/// Originally a temporary test to not have to choose joint influence by distance
+	/// but might now be the default for our OWN GENERATED geometry
 	std::map<int, std::vector<GA_Offset>> offsetsPerJoint = std::map<int, std::vector<GA_Offset>>();
 	for (int i = 0; i < inOrder.size(); i++) {
 		offsetsPerJoint.insert(pair<int, std::vector<GA_Offset>>(
 			inOrder.at(i)->getRigIndex(), std::vector<GA_Offset>()
 		));
 	}
-
+	/// WARNING: Do NOT use above for custom user geometry. See addWeights function for alternative
 
 	// Create geometry
-	// TODO add user input options
-	//GU_Detail* geo = generateGeom(root);
+	// TODO add option for user input
 	GU_Detail* geo = buildGeo(inOrder, offsetsPerJoint);
-	std::cout << "Did geo" << std::endl;
 
+	// Set up geometry information for agent (including weights and (unincluded) collision shape)
 	GU_AgentShapeLibPtr shapeLibrary = createShapeLibrary(path, *rig, geo, inOrder, offsetsPerJoint);
 	if (!shapeLibrary) {
 		std::cout << "ShapeLibrary is null" << std::endl;
 		return nullptr;
-		//return std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr>(nullptr, nullptr);
 	}
-	std::cout << "Did shapelib" << std::endl;
 
+	// Sets up skinning and deformer information
 	GU_AgentLayerPtr startLayer = createStartLayer(path, rig, shapeLibrary);
 	if (!startLayer) {
 		std::cout << "StartLayer is null" << std::endl;
 		return nullptr;
-		//return std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr>(nullptr, nullptr);
 	}
-	std::cout << "Did layer" << std::endl;
 
 	// TODO collisionLayer
 
 	GU_AgentDefinitionPtr definition(new GU_AgentDefinition(rig, shapeLibrary));
 	definition->addLayer(startLayer);
-
-	/*// Packing the primitives
-	/// TODO quadruple check this
-	// Delete all the primitives, keeping only the points
-	geo->destroyPrimitives(geo->getPrimitiveRange());
-	// Create the agent primitive
-	GU_PrimPacked *packedPrim = GU_Agent::agent(*geo);
-
-	// Bumping these 2 attribute owners is what we need to do when adding
-	// pack agent prims because it has a single vertex.
-	geo->getAttributes().bumpAllDataIds(GA_ATTRIB_VERTEX);
-	geo->getAttributes().bumpAllDataIds(GA_ATTRIB_PRIMITIVE);
-	geo->getPrimitiveList().bumpDataId(); // modified primitives*/
-
-	//return std::pair<GU_PrimPacked*, GU_AgentDefinitionPtr>(nullptr, definition);//packedPrim, definition);
 	return definition;
-}
-
-GU_Agent* PrototypeAgentPtr::createAgent(GU_PrimPacked* packedPrim, GU_AgentDefinitionPtr agentDef)
-{
-	/*// Create a name attribute for the agents
-	GA_RWHandleS name_attrib(gdp->addStringTuple(GA_ATTRIB_PRIMITIVE,
-		"name", 1));
-	GU_AgentLayerConstPtr current_layer =
-		agentDef->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_DEFAULT));
-	//GU_AgentLayerConstPtr collision_layer =
-	//	agentDef->layer(UTmakeUnsafeRef(GU_AGENT_LAYER_COLLISION));
-	// Set the agent definition to the agent prims
-	UT_WorkBuffer name;
-	UT_String agent_name = "agenty";
-	GU_Agent* agent = UTverify_cast<GU_Agent*>(packedPrim->hardenImplementation());
-	agent->setDefinition(packedPrim, agentDef);
-	agent->setCurrentLayer(packedPrim, current_layer);
-	// agentname_1, agentname_2, etc.
-	name.sprintf("%s_%d", agent_name.buffer(), 0);
-	name_attrib.set(packedPrim->getMapOffset(), name.buffer());
-	
-	// Mark what modified
-	gdp->getPrimitiveList().bumpDataId();
-	name_attrib.bumpDataId();*/
-	return nullptr;
 }

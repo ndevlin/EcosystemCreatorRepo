@@ -1,52 +1,35 @@
 #include "BNode.h"
 #include "SOP_Branch.h"
+#include "PlantSpecies.h"
 //using namespace HDK_Sample;
-
-float BNode::g1 = 1.0;
-float BNode::g2 = -0.2;
-
-void BNode::updateG1(float gVal) {
-	g1 = gVal;
-}
-void BNode::updateG2(float gVal) {
-	g2 = gVal;
-}
-
-float BNode::getG1() {
-	return g1;
-}
-float BNode::getG2() {
-	return g2;
-}
 
 /// Constructors
 BNode::BNode() 
-	: position(0.0), age(0.0), maxLength(3.0), thickness(0.1), 
-		parent(nullptr), children(), connectedModules(), rigIndex(-1)
+	: position(0.0), age(0.0), maxLength(3.0), thickness(0.1), parent(nullptr),
+		plantVars(nullptr), children(), connectedModules(), rigIndex(-1)
 {}
 
 BNode::BNode(BNode* other)
 	: position(other->getPos()), unitDir(other->getDir()), age(other->getAge()), 
 		maxLength(other->getMaxLength()), thickness(other->getBaseRadius()), 
 		baseRadius(other->getBaseRadius()), rigIndex(other->getRigIndex()),
-		parent(nullptr), children(), connectedModules(), root(other->isRoot())
-	//: BNode(other->getPos(), other->getDir(), other->getAge(),
-	//	other->getMaxLength(), other->getBaseRadius())
-{
-	//rigIndex = other->getRigIndex();
-}
+		plantVars(other->getPlantVars()), root(other->isRoot()),
+		parent(nullptr), children(), connectedModules()
+{}
 
 BNode::BNode(UT_Vector3 pos, UT_Vector3 dir, float branchAge, float length, float thick, bool isRootNode)
 	: position(pos), unitDir(dir), age(branchAge), maxLength(length),
-		thickness(thick), baseRadius(thick), parent(nullptr), children(), 
-		connectedModules(), rigIndex(-1), root(isRootNode)
+		thickness(thick), baseRadius(thick), root(isRootNode), 
+		parent(nullptr), plantVars(nullptr), children(),
+		connectedModules(), rigIndex(-1)
 {
 	unitDir.normalize();
 }
 
 BNode::BNode(vec3 start, vec3 end, float branchAge, float length, float thick, bool isRootNode)
 	: age(branchAge), maxLength(length), thickness(thick), baseRadius(thick),
-		parent(nullptr), children(), connectedModules(), rigIndex(-1), root(isRootNode)
+		root(isRootNode), parent(nullptr), plantVars(nullptr), children(), 
+		connectedModules(), rigIndex(-1)
 {
 	position = UT_Vector3();
 	position(0) = end[0];
@@ -75,7 +58,7 @@ BNode::~BNode() {
 	}
 	for (SOP_Branch* connectedModule : connectedModules) {
 		connectedModule->destroySelf();
-		// TODO remove from parent list too
+		// TODO remove from parent list too - currently happens in SOP_Branch::setAge
 	}
 }
 
@@ -87,17 +70,18 @@ std::shared_ptr<BNode> BNode::deepCopy(std::shared_ptr<BNode> par) {
 	for (std::shared_ptr<BNode> child : children) {
 		std::shared_ptr<BNode> copyChild = child->deepCopy(newNode);
 		newNode->addChild(copyChild);
-		//if (copyChild->getParent()) {
-		//	std::cout << "has parent in copy" << std::endl;
-		//}
 	}
 	return newNode;
 }
 
 /// SETTERS
-void BNode::setParent(std::shared_ptr<BNode> par) // TODO make ref to shared
+void BNode::setParent(std::shared_ptr<BNode> par)
 {
 	parent = par;
+}
+
+void BNode::setPlantVars(PlantSpeciesVariables* vars) {
+	plantVars = vars;
 }
 
 void BNode::addChild(std::shared_ptr<BNode> child)
@@ -110,7 +94,7 @@ void BNode::addModuleChild(SOP_Branch* child) {
 }
 
 // Adjust all new age-based calculations
-void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange, 
+void BNode::setAge(float changeInAge, 
 	std::vector<std::shared_ptr<BNode>>& terminalNodes, bool mature, bool decay) {
 	age += changeInAge;
 
@@ -120,7 +104,7 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 	// For full branch-segments only, update length and position:
 	else if (parent) {
 		// TODO make this a more smooth curve, slow down over time
-		float branchLength = min(maxLength, age * 0.3f);
+		float branchLength = min(maxLength, age * plantVars->getBeta());
 		/*float branchLength = (age * 0.1f) / maxLength / 2.0f + 0.5f;
 		branchLength = branchLength * branchLength * (3 - 2 * branchLength);
 		branchLength = (max(min(branchLength, 1.0f), 0.5f) - 0.5f) * 2.0f * maxLength;*/
@@ -129,17 +113,17 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 
 		// Calculate tropism offset using  static values
 		// TODO, just get a pointer to plant in BNode so that this isnt the same for all plants
-		float g1Val = pow(0.95f, age * BNode::getG1());   // Controls tropism decrease over time
-		float g2Val = -BNode::getG2();                    // Controls tropism strength
+		float g1 = pow(0.95f, age * plantVars->getG1());   // Controls tropism decrease over time
+		float g2 = -plantVars->getG2();                    // Controls tropism strength
 		UT_Vector3 gDir = UT_Vector3(0.0f, -1.0f, 0.0f);  // Gravity Direction
 
-		UT_Vector3 tOffset = (g1Val * g2Val * gDir) / max(age + g1Val, 0.05f);
+		UT_Vector3 tOffset = (g1 * g2 * gDir) / max(age + g1, 0.05f);
 
 		position += tOffset * branchLength; // scaled it for the effect to be proportionate
 	}
 
 	// Branch thickness update:
-	thickness = max(0.015f, age * baseRadius * 0.4f);
+	thickness = max(0.015f, age * baseRadius * plantVars->getTC());
 	// There's an age difference of 1 between terminal nodes and their children
 	// This is how I've decided to deal with it for now
 	if (parent && isRoot()) { thickness = parent->getThickness(); }
@@ -147,7 +131,7 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 
 	// Update children
 	for (std::shared_ptr<BNode> child : children) {
-		child->setAge(changeInAge, ageRange, terminalNodes, mature, decay);
+		child->setAge(changeInAge, terminalNodes, mature, decay);
 	}
 
 	if (mature && children.empty() /*TODO allow for multiple*/ && connectedModules.empty()) {
@@ -165,6 +149,10 @@ void BNode::setAge(float changeInAge, std::pair<float, float>& ageRange,
 }
 
 /// GETTERS
+PlantSpeciesVariables* BNode::getPlantVars() {
+	return plantVars;
+}
+
 bool BNode::isRoot() const {
 	return root;
 }
@@ -317,20 +305,15 @@ UT_Matrix4 BNode::getWorldTransform() {
 }*/
 
 /// More forms of updating
-void BNode::recThicknessUpdate(float radiusMultiplier) {
+void BNode::recTransformation(float ageDif, float radiusMultiplier, 
+	float lengthMultiplier, UT_Matrix3& rotation) {
+	age += ageDif;
 	baseRadius *= radiusMultiplier;
-	for (std::shared_ptr<BNode> child : children) { child->recThicknessUpdate(radiusMultiplier); }
-}
-
-// experimental
-void BNode::recLengthUpdate(float lengthMultiplier) {
 	maxLength *= lengthMultiplier;
-	for (std::shared_ptr<BNode> child : children) { child->recLengthUpdate(lengthMultiplier); }
-}
-
-// experimental #2
-void BNode::recRotate(UT_Matrix3& rotation) {
 	unitDir = rowVecMult(unitDir, rotation);
-	//unitDir = colVecMult(rotation, unitDir);
-	for (std::shared_ptr<BNode> child : children) { child->recRotate(rotation); }
+
+	for (std::shared_ptr<BNode> child : children) { 
+		child->recTransformation(ageDif, radiusMultiplier, 
+			lengthMultiplier, rotation);
+	}
 }
