@@ -45,8 +45,9 @@ public:
 	void                     setScatter(OP_Node* scNode);
 
 	/// Initializes a plant node in this ecosystem. The first using a randomly chosen species
-	SOP_Plant* createPlant(UT_Vector3 origin = UT_Vector3());
-	SOP_Plant* createPlant(PlantSpecies* currSpecies, UT_Vector3 origin = UT_Vector3());
+	SOP_Plant* createPlant(UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
+	SOP_Plant* createPlant(PlantSpecies* currSpecies, 
+		UT_Vector3 origin = UT_Vector3(), bool setNewBirthday = true);
 			// TODO, seeding (in SOP_Plant)
 
 	/// Choose a likely plant species to spawn based on current spawn location's climate features

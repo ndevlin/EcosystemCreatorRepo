@@ -116,7 +116,7 @@ SOP_Plant::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 		newPlant->setOutput(outNode_sop);
 	}
 
-	newPlant->moveToGoodPosition();
+	//newPlant->moveToGoodPosition();
 
 	// TODO move color handling to agent
 

@@ -449,7 +449,7 @@ OBJ_Ecosystem::cookMyObj(OP_Context &context)
 
 		// If we still didn't hit the end of points, keep generating more plants
 		while (!it.atEnd()) {
-			createPlant(scatteredP->getPos3(*it)); // WARNING will be initialized at present age
+			createPlant(scatteredP->getPos3(*it), false); // WARNING will be initialized at present age
 			++it;
 		}
 	}
@@ -494,12 +494,14 @@ void OBJ_Ecosystem::setScatter(OP_Node* scNode) {
 }
 
 /// Initializes a plant node in this ecosystem using a randomly chosen species
-SOP_Plant* OBJ_Ecosystem::createPlant(UT_Vector3 origin) {
-	return createPlant(chooseSpecies(), origin);
+SOP_Plant* OBJ_Ecosystem::createPlant(UT_Vector3 origin, bool setNewBirthday) {
+	return createPlant(chooseSpecies(), origin, setNewBirthday);
 }
 
 /// Initializes a plant node in this ecosystem with a pre-selected species (usually called in Seeding)
-SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies, UT_Vector3 origin) {
+SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies, 
+	UT_Vector3 origin, bool setNewBirthday) 
+{
 	OP_Node* node = createNode("PlantNode");
 	if (!node) { std::cout << "Plant node is Nullptr" << std::endl; }
 	else if (!node->runCreateScript())
@@ -507,7 +509,11 @@ SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies, UT_Vector3 orig
 
 	SOP_Plant* newPlant = (SOP_Plant*)node;
 	if (newPlant) {
-		newPlant->initPlant(this, currSpecies, worldAge);
+		if (setNewBirthday) {
+			newPlant->initPlant(this, currSpecies, worldAge);
+		}
+		else { newPlant->initPlant(this, currSpecies, 0.0f); }
+
 		newPlant->setPosition(origin);
 		addToMerger(newPlant);
 
