@@ -242,7 +242,47 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	mountain->connectToInputNode(*groundColor, 0, 0);
 	mountain->moveToGoodPosition();
 
-	///
+	// Color for bark
+	OP_Node* barkColor = newEco->createNode("color");
+	if (!barkColor)
+	{
+		std::cout << "Color is Nullptr" << std::endl;
+		return newEco;
+	}
+	else if (!barkColor->runCreateScript())
+		std::cout << "Color constructor error" << std::endl;
+
+	barkColor->connectToInputNode(*allTreesMergeNode, 0, 0);
+	barkColor->moveToGoodPosition();
+
+	barkColor->setFloat("color", 0, 0.f, 0.300f);
+	barkColor->setFloat("color", 1, 0.f, 0.188f);
+	barkColor->setFloat("color", 2, 0.f, 0.075f);
+
+	// Create a merge node trees with ground etc.
+	OP_Node* finalMergeNode = newEco->createNode("merge");
+
+	if (!finalMergeNode) { std::cout << "Merge Node is Nullptr" << std::endl; }
+	else if (!finalMergeNode->runCreateScript())
+		std::cout << "Merge constructor error" << std::endl;
+
+	finalMergeNode->connectToInputNode(*mountain, 0, 0);
+	finalMergeNode->connectToInputNode(*barkColor, 1, 0);
+	finalMergeNode->moveToGoodPosition();
+
+
+	// Create a null node for output
+	OP_Node* nullOut = newEco->createNode("null");
+
+	if (!nullOut) { std::cout << "MNull Node is Nullptr" << std::endl; }
+	else if (!nullOut->runCreateScript())
+		std::cout << "Null node constructor error" << std::endl;
+
+	nullOut->connectToInputNode(*finalMergeNode, 0, 0);
+	nullOut->moveToGoodPosition();
+
+	nullOut->setVisible(true);
+
 
 	// Scatter to create points
 	OP_Node* scatter = newEco->createNode("scatter");
@@ -315,9 +355,8 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	}*/
 
 	//allTreesMergeNode->connectToInputNode(*mountain, index, 0);
-	newEco->addToMerger(mountain);
+	//newEco->addToMerger(mountain);
 	allTreesMergeNode->moveToGoodPosition();
-	allTreesMergeNode->setVisible(true);
 
 	return newEco;
 }
