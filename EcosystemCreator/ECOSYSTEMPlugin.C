@@ -517,7 +517,7 @@ SOP_Plant* OBJ_Ecosystem::createPlant(PlantSpecies* currSpecies,
 		newPlant->setPosition(origin);
 		addToMerger(newPlant);
 
-		node->moveToGoodPosition(); // TODO remove for speed
+		//node->moveToGoodPosition(); // TODO remove for speed
 	}
 
 	return newPlant;
