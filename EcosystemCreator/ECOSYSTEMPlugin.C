@@ -188,9 +188,6 @@ OBJ_Ecosystem::myConstructor(OP_Network *net, const char *name, OP_Operator *op)
 	else if (!allTreesMergeNode->runCreateScript())
 		std::cout << "Merge constructor error" << std::endl;
 
-	if (allTreesMergeNode) { newEco->setMerger(allTreesMergeNode); }
-
-
 	// Grid to represent ground
 	OP_Node* grid = newEco->createNode("grid");
 	if (!grid)
